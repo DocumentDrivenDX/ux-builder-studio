@@ -1,8 +1,47 @@
 {
-  "buildId": "bf5b35a3af5173b1",
+  "buildId": "e829da60726472e6",
   "surfaces": [
     {
       "actions": [
+        {
+          "control": "choice",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Choose \"The app's default appearance\": The appearance the app opens in once an option is chosen: automatic (the person's setting), light or dark. It is in the Card.",
+          "id": "brand.appearance",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose: system = Auto; light = Light; dark = Dark",
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "brand_appearance",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            },
+            {
+              "kind": "panel",
+              "openedBy": [],
+              "title": "Card"
+            }
+          ],
+          "source": "control",
+          "title": "The app's default appearance"
+        },
         {
           "control": "button",
           "declaredIn": "src/panels/BrandPanel.tsx",
@@ -27,7 +66,7 @@
         {
           "control": "choice",
           "declaredIn": "src/panels/BrandPanel.tsx",
-          "description": "Choose \"Style (design system)\": The design system the options are shown on: control shapes, density and fonts (Databricks, Material, Fluent or Carbon) It is in the Card.",
+          "description": "Choose \"Style (design system)\": The design system the app is built on: control shapes, density and fonts (Databricks, Material, Fluent or Carbon) It is in the Card.",
           "id": "brand.design-system",
           "input": {
             "additionalProperties": false,
@@ -578,7 +617,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: variant.name (Name), variant.note (What differs), preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), brand.design-system (Style (design system)), brand.preview-appearance (Show in), brand.kit-name (Kit name), brand.url (Website), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
+          "description": "What the page shows now. values: variant.name (Name), variant.note (What differs), preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), brand.url (Website), brand.design-system (Style (design system)), brand.appearance (The app's default appearance), brand.preview-appearance (Show in), brand.kit-name (Kit name), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
           "id": "state",
           "schema": {
             "properties": {
@@ -673,7 +712,7 @@
         {
           "control": "button",
           "declaredIn": "src/pages/HomePage.tsx",
-          "description": "Press \"Create app\": Create the new app from the name and use case, and open it.",
+          "description": "Press \"Create app\": Create the new app from the name, use case and look, and open it (on its Brand and style section when the look comes from a website or logo)",
           "id": "new-app.create",
           "input": {
             "additionalProperties": false,
@@ -690,6 +729,70 @@
           ],
           "source": "control",
           "title": "Create app"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Choose \"Brand kit\": The brand kit from the library the new app wears.",
+          "id": "new-app.kit",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_kit",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "Brand kit"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Choose \"How should it look?\": Where the new app's look comes from: the organisation's website, its logo, a brand kit in the library, or a built-in theme.",
+          "id": "new-app.look-from",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose: website = Our website's brand; logo = Our logo; kit = A brand kit; theme = A built-in theme",
+                "enum": [
+                  "website",
+                  "logo",
+                  "kit",
+                  "theme"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_look_from",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "How should it look?"
         },
         {
           "control": "text",
@@ -721,6 +824,35 @@
           "title": "App name"
         },
         {
+          "control": "choice",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Choose \"Theme\": The built-in theme the new app starts with.",
+          "id": "new-app.theme",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_theme",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "Theme"
+        },
+        {
           "control": "text",
           "declaredIn": "src/pages/HomePage.tsx",
           "description": "Type into \"What should it do?\": The new app's use case, in the person's words. The field's hint: Who uses it, and what they need to get done.",
@@ -748,6 +880,35 @@
           ],
           "source": "control",
           "title": "What should it do?"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Type into \"Website\": The organisation's website, whose brand the new app takes. The field's hint: The studio reads its colours, fonts and style, then shows three options to choose from. Its placeholder, an example of what goes in it: \"www.example.com\".",
+          "id": "new-app.website",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_website",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "Website"
         }
       ],
       "description": "The Home page (/).",
@@ -755,7 +916,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: new-app.name (App name), new-app.use-case (What should it do?).",
+          "description": "What the page shows now. values: new-app.name (App name), new-app.use-case (What should it do?), new-app.look-from (How should it look?), new-app.website (Website), new-app.kit (Brand kit), new-app.theme (Theme).",
           "id": "state",
           "schema": {
             "properties": {
@@ -975,6 +1136,70 @@
     {
       "actions": [
         {
+          "description": "Adjust a brand option: Makes one of the captured brand's options again with changed engine settings, when the person says it is not quite right (\"a bit darker\", \"less orange\", \"greyer backgrounds\"). Only the settings given change; earlier adjustments to the option are kept. The engine refits the result to the contrast rules, so never pick colours yourself. hueShift: degrees (-30 to 30) to rotate the brand hue. chromaScale: colour strength (0.5 muted to 1.5 vivid; 1 as found). neutralTint: how much greys and backgrounds take the brand hue (0 pure grey to 2). stateHarmony: how far status colours lean to the brand (0 to 1). groundLight: page lightness in light (0.94 to 1). groundDark: page lightness in dark (0.1 deep to 0.26). Returns the new colours and any rules to review; the person still chooses. (An option's Adjust this option sliders in the Brand and style panel)",
+          "effect": "edit",
+          "id": "app/action/adjust-brand-option",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "chromaScale": {
+                "maximum": 1.5,
+                "minimum": 0.5,
+                "type": "number",
+                "x-unit": "×"
+              },
+              "groundDark": {
+                "maximum": 0.26,
+                "minimum": 0.1,
+                "type": "number",
+                "x-unit": "OKLCH lightness (0 to 1)"
+              },
+              "groundLight": {
+                "maximum": 1,
+                "minimum": 0.94,
+                "type": "number",
+                "x-unit": "OKLCH lightness (0 to 1)"
+              },
+              "hueShift": {
+                "maximum": 30,
+                "minimum": -30,
+                "type": "number",
+                "x-unit": "°"
+              },
+              "neutralTint": {
+                "maximum": 2,
+                "minimum": 0,
+                "type": "number",
+                "x-unit": "×"
+              },
+              "option": {
+                "description": "An option id from the brand observation",
+                "type": "string"
+              },
+              "stateHarmony": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number",
+                "x-unit": "fraction (0 to 1)"
+              }
+            },
+            "required": [
+              "option"
+            ],
+            "type": "object"
+          },
+          "name": "app_adjust_brand_option",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "An option's Adjust this option sliders in the Brand and style panel"
+            }
+          ],
+          "source": "room-action",
+          "title": "Adjust a brand option"
+        },
+        {
           "description": "Use a brand kit: Dresses the app in a brand kit already in the studio's library (see the brand observation's kits). (A kit's Use button in the Brand and style panel's library)",
           "effect": "edit",
           "id": "app/action/apply-brand-kit",
@@ -1076,6 +1301,26 @@
           "title": "Apply changes"
         },
         {
+          "description": "Ask for a logo file: Shows the Brand and style panel, where the person adds their logo file (SVG or PNG); you cannot add a file yourself. Use it when there is no website, or the person would rather start from the logo. (The Brand and style panel's logo file picker)",
+          "effect": "view",
+          "id": "app/action/ask-for-logo",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "app_ask_for_logo",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The Brand and style panel's logo file picker"
+            }
+          ],
+          "source": "room-action",
+          "title": "Ask for a logo file"
+        },
+        {
           "description": "Get brand from a website: Reads a website's brand on this computer (a screenshot, its CSS colours, fonts, button style and logo), shows it in the Brand and style panel, and makes three palette options that meet ux-builder's colour rules, on the design system the site's style suggests. Takes a few seconds. Returns the colours found, the design system and the option ids; nothing about the app changes until an option is chosen. (The Brand and style panel's Website field and Get brand button)",
           "effect": "edit",
           "id": "app/action/capture-brand",
@@ -1111,6 +1356,15 @@
           "input": {
             "additionalProperties": false,
             "properties": {
+              "appearance": {
+                "description": "The app's default appearance (default: automatic, or dark for a dark site)",
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              },
               "name": {
                 "description": "The kit's name",
                 "type": "string"
@@ -1436,7 +1690,7 @@
           }
         },
         {
-          "description": "The app's look and the brand step: the theme or brand kit it wears, the website brand captured (colours and where each was seen, fonts, the suggested design system, the three options with what each does and any colour rules to review), and the kits in the library",
+          "description": "The app's look and the brand step: the theme or brand kit it wears, the brand captured from a website or logo (colours and where each was seen, fonts, the suggested design system and what each design system settles of the style rules, the three options with their settings, any adjustments, and any colour rules to review), and the kits in the library",
           "id": "brand",
           "schema": {
             "properties": {
@@ -1516,12 +1770,25 @@
     {
       "actions": [
         {
-          "description": "Create app: Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case. (The New app form on the catalog page)",
+          "description": "Create app: Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case. Give a brand kit if the person named one; for a website, create the app, then use the app room's capture-brand action. (The New app form on the catalog page)",
           "effect": "edit",
           "id": "catalog/action/create-app",
           "input": {
             "additionalProperties": false,
             "properties": {
+              "appearance": {
+                "description": "Optional default appearance",
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              },
+              "brandKit": {
+                "description": "Optional brand kit from the library the app wears from the start (see the catalog observation's kits)",
+                "type": "string"
+              },
               "description": {
                 "description": "One sentence on what the app does",
                 "maxLength": 300,
@@ -1534,7 +1801,7 @@
                 "type": "string"
               },
               "theme": {
-                "description": "Optional starting theme name (default plain)",
+                "description": "Optional starting built-in theme (default plain)",
                 "type": "string"
               },
               "useCase": {
@@ -1607,6 +1874,13 @@
               },
               "count": {
                 "type": "integer"
+              },
+              "kits": {
+                "description": "The brand kits in the library, each as \"<id>: <name> (<option>, <design system>)\"",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               }
             },
             "type": "object"

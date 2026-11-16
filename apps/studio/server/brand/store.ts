@@ -22,12 +22,16 @@ const ID = /^[a-z0-9-]{1,80}$/;
 
 export type CaptureRecord = {
   id: string;
+  /** Where the brand came from: a website, or a logo file. */
+  source?: "website" | "logo";
   url: string;
   finalUrl: string;
   title: string;
   siteName: string | null;
   capturedAt: string;
   hasLogo: boolean;
+  /** The logo's file type (a website's logo is always a PNG screenshot). */
+  logoType?: "png" | "svg";
   analysis: BrandAnalysis;
 };
 
@@ -37,7 +41,7 @@ export type BrandKit = {
   createdAt: string;
   source: { url: string; title: string; captureId: string } | null;
   designSystem: string;
-  option: { id: string; title: string; description: string; strategy: string };
+  option: { id: string; title: string; description: string; strategy: string; adjusted?: Record<string, number> };
   brand: BrandDoc & { generation?: unknown };
   colours: Array<{ hex: string; sources: string[] }>;
   findings: Finding[];
@@ -55,10 +59,10 @@ const safe = (id: string) => { if (!ID.test(id)) throw new Error(`Invalid id ${i
 export const captureDir = (id: string) => join(root(), "captures", safe(id));
 export const newId = () => randomUUID().slice(0, 8);
 
-export function saveCapture(rec: CaptureRecord, files: { screenshot: Buffer; logo: Buffer | null }) {
+export function saveCapture(rec: CaptureRecord, files: { screenshot: Buffer | null; logo: Buffer | null }) {
   const dir = captureDir(rec.id);
-  write(join(dir, "screenshot.png"), files.screenshot);
-  if (files.logo) write(join(dir, "logo.png"), files.logo);
+  if (files.screenshot) write(join(dir, "screenshot.png"), files.screenshot);
+  if (files.logo) write(join(dir, `logo.${rec.logoType ?? "png"}`), files.logo);
   write(join(dir, "capture.json"), rec);
 }
 export function getCapture(id: string): CaptureRecord | null {
@@ -66,7 +70,7 @@ export function getCapture(id: string): CaptureRecord | null {
   const file = join(captureDir(id), "capture.json");
   return existsSync(file) ? read<CaptureRecord>(file) : null;
 }
-export function captureFile(id: string, name: "screenshot.png" | "logo.png") {
+export function captureFile(id: string, name: "screenshot.png" | "logo.png" | "logo.svg") {
   if (!ID.test(id)) return null;
   const file = join(captureDir(id), name);
   return existsSync(file) ? file : null;

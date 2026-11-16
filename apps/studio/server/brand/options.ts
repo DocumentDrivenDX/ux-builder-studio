@@ -13,10 +13,10 @@
    colour, or a deep blue when it has none, and the red stays the logo's and
    identity's colour. */
 
-import { candidateOf, generate, designSystems, parseHex } from "@ux-builder/engine/node";
+import { candidateOf, generate, designSystems, parseHex, SETTINGS } from "@ux-builder/engine/node";
 import type { BrandAnalysis } from "./analyse.js";
-import { checkPalette, isRed, MARGIN, type Finding } from "./checks.js";
-import { resolveBoth, type BrandDoc, type Resolved } from "./tokens.js";
+import { checkPalette, checkStyle, isRed, MARGIN, type Finding } from "./checks.js";
+import { DESIGN_SYSTEMS, resolveBoth, type BrandDoc, type Resolved } from "./tokens.js";
 
 export type PaletteOption = {
   id: string;
@@ -27,8 +27,13 @@ export type PaletteOption = {
   tokens: Resolved;
   swatches: Record<"light" | "dark", Record<"structure" | "accent" | "ground" | "surface" | "text", string>>;
   findings: Finding[];
+  /** The engine settings it was made with (the adjustable ones). */
+  settings: Record<string, number>;
+  /** The settings a person or the App Expert changed, if any. */
+  adjusted?: Record<string, number>;
 };
-export type Options = { designSystem: string; options: PaletteOption[]; notes: string[] };
+export type StyleInfo = { name: string; title: string; summary: string; findings: Finding[] };
+export type Options = { designSystem: string; options: PaletteOption[]; notes: string[]; styles: StyleInfo[] };
 
 const ABOUT: Record<string, { title: string; description: string }> = {
   faithful: { title: "Closest to the site", description: "The brand colour on primary buttons, links and focus, as the website uses it." },
@@ -70,34 +75,59 @@ export function fontsFor(analysis: Pick<BrandAnalysis, "fonts">) {
   return { fonts: Object.keys(fonts).length ? fonts : undefined, notes: [note("text", analysis.fonts.body, body), analysis.fonts.heading !== analysis.fonts.body ? note("heading", analysis.fonts.heading, fonts.heading) : null].filter(Boolean) as string[] };
 }
 
-export function paletteOptions(analysis: BrandAnalysis, designSystem: string): Options {
+/* The settings a person (or the App Expert, from "a bit darker", "less
+   orange") may adjust on an option, with the engine's own ranges. */
+export const ADJUSTABLE = ["hueShift", "chromaScale", "neutralTint", "stateHarmony", "groundLight", "groundDark"] as const;
+export type Adjustment = Partial<Record<(typeof ADJUSTABLE)[number], number>>;
+export const ADJUST_LABELS: Record<(typeof ADJUSTABLE)[number], string> = {
+  hueShift: "Hue shift (degrees)",
+  chromaScale: "Colour strength",
+  neutralTint: "Tint of greys and backgrounds",
+  stateHarmony: "Status colours lean to the brand",
+  groundLight: "Page lightness (light)",
+  groundDark: "Page lightness (dark)",
+};
+export const adjustRanges = () => ADJUSTABLE.map((k) => ({ name: k, label: ADJUST_LABELS[k], min: SETTINGS[k].min, max: SETTINGS[k].max, default: SETTINGS[k].default, step: SETTINGS[k].max - SETTINGS[k].min > 10 ? 1 : 0.01 }));
+
+/* What every option of one analysis starts from: the engine's view of the brand colours, and notes. */
+function prepare(analysis: BrandAnalysis) {
   const notes: string[] = [];
   let candidates = analysis.colours.map((c) => candidateOf(parseHex(c.hex), c.share));
   const top = analysis.colours[0]?.hex;
-  const redBrand = !!top && isRed(top);
-  if (redBrand) {
+  if (top && isRed(top)) {
     // Actions take a colour the site itself uses on its links or buttons; a colour seen only in its CSS or imagery is not evidence enough.
     candidates = analysis.colours
       .filter((c) => !isRed(c.hex) && c.sources.some((s) => s.kind === "links" || s.kind === "buttons"))
       .map((c) => candidateOf(parseHex(c.hex), c.share));
     notes.push(candidates.length
       ? `The brand's red (${top}) stays its logo and identity colour; buttons, links and focus use ${candidates[0].hex.toLowerCase()}, the colour of the site's own links and buttons, because red is kept for errors and destructive actions.`
-      : `The brand's red (${top}) stays its logo and identity colour; buttons, links and focus use a deep blue, because red is kept for errors and destructive actions and the site's links and buttons use no other colour.`);
+      : `The brand's red (${top}) stays its logo and identity colour; buttons, links and focus use a deep blue, because red is kept for errors and destructive actions and nothing else in the brand is used for actions.`);
   }
   const engineAnalysis = { format: "url", candidates, monochrome: candidates.length === 0, warnings: [] as string[] };
   // Fitted to theme.contrast-margin's 4.7:1, not just the 4.5:1 gate, so key colours have room to spare.
   const settings = { minContrast: MARGIN, ...(candidates.length ? {} : { suggestedHue: SUGGESTED_BLUE }) };
-  const { options } = generate(engineAnalysis, settings, { designSystems: designSystems() });
   const { fonts, notes: fontNotes } = fontsFor(analysis);
   notes.push(...fontNotes);
+  return { engineAnalysis, settings, fonts, top, notes };
+}
 
-  const built: PaletteOption[] = options.map((o: any) => {
-    const brand: PaletteOption["brand"] = { name: "brand", appearances: structuredClone(o.brand.appearances), ...(fonts ? { fonts } : {}), generation: o.brand.generation };
-    if (top) for (const ap of Object.values(brand.appearances) as any[]) if (ap.brand?.["logo-paint"]) ap.brand["logo-paint"] = { $value: top.toUpperCase(), $description: "The brand's top colour, from the website." };
-    const tokens = resolveBoth(brand, designSystem);
-    const sw = (t: Record<string, string>) => ({ structure: t["piq-color-structure"], accent: t["piq-color-accent"], ground: t["piq-color-ground"], surface: t["piq-color-surface"], text: t["piq-color-text"] });
-    return { id: o.label, ...about(o.label), strategy: o.strategy, brand, tokens, swatches: { light: sw(tokens.light), dark: sw(tokens.dark) }, findings: checkPalette(tokens) };
-  });
+function build(o: any, prep: ReturnType<typeof prepare>, designSystem: string, id = o.label, adjusted?: Adjustment): PaletteOption {
+  const brand: PaletteOption["brand"] = { name: "brand", appearances: structuredClone(o.brand.appearances), ...(prep.fonts ? { fonts: prep.fonts } : {}), generation: o.brand.generation };
+  if (prep.top) for (const ap of Object.values(brand.appearances) as any[]) if (ap.brand?.["logo-paint"]) ap.brand["logo-paint"] = { $value: prep.top.toUpperCase(), $description: "The brand's top colour, as found." };
+  const tokens = resolveBoth(brand, designSystem);
+  const sw = (t: Record<string, string>) => ({ structure: t["piq-color-structure"], accent: t["piq-color-accent"], ground: t["piq-color-ground"], surface: t["piq-color-surface"], text: t["piq-color-text"] });
+  const settings = Object.fromEntries(ADJUSTABLE.map((k) => [k, o.settings[k]])) as Record<(typeof ADJUSTABLE)[number], number>;
+  return { id, ...about(id), strategy: o.strategy, brand, tokens, swatches: { light: sw(tokens.light), dark: sw(tokens.dark) }, findings: checkPalette(tokens), settings, ...(adjusted ? { adjusted } : {}) };
+}
+
+const generateAll = (prep: ReturnType<typeof prepare>, given: Record<string, unknown> = {}) =>
+  generate(prep.engineAnalysis, { ...prep.settings, ...given }, { designSystems: designSystems() }) as { options: any[]; withheld: Array<{ label: string; withheld: string[] }> };
+const generated = (prep: ReturnType<typeof prepare>, given: Record<string, unknown> = {}) => generateAll(prep, given).options;
+
+export function paletteOptions(analysis: BrandAnalysis, designSystem: string): Options {
+  const prep = prepare(analysis);
+  const notes = [...prep.notes];
+  const built = generated(prep).map((o) => build(o, prep, designSystem));
 
   const offered = built.filter((o) => !o.findings.some((f) => f.severity === "error"));
   const rank = (o: PaletteOption) => PREFERENCE.indexOf(o.id) === -1 ? 99 : PREFERENCE.indexOf(o.id);
@@ -111,5 +141,25 @@ export function paletteOptions(analysis: BrandAnalysis, designSystem: string): O
     chosen.push(o);
   }
   if (chosen.length < 3) notes.push(`Only ${chosen.length} option${chosen.length === 1 ? "" : "s"} met the contrast and colour rules.`);
-  return { designSystem, options: chosen, notes };
+  return { designSystem, options: chosen, notes, styles: styles(chosen[0]) };
+}
+
+/* One option with some of its settings changed: the engine makes it again, fitted and checked like the others. */
+export function adjustOption(analysis: BrandAnalysis, designSystem: string, optionId: string, adjust: Adjustment): PaletteOption {
+  const prep = prepare(analysis);
+  const base = generated(prep).find((o) => o.label === optionId);
+  if (!base) throw new Error(`There is no option ${optionId}`);
+  const clean = Object.fromEntries(Object.entries(adjust).filter(([k, v]) => (ADJUSTABLE as readonly string[]).includes(k) && Number.isFinite(v)));
+  const result = generateAll(prep, { ...Object.fromEntries(ADJUSTABLE.map((k) => [k, base.settings[k]])), ...clean, strategies: base.strategy });
+  const again = result.options.find((o) => o.strategy === base.strategy && o.label === base.strategy);
+  if (!again) {
+    const why = result.withheld.flatMap((w) => w.withheld).slice(0, 2).join("; ");
+    throw new Error(`With those settings this option cannot meet the contrast rules${why ? ` (${why})` : ""}. Try a smaller change.`);
+  }
+  return build(again, prep, designSystem, optionId, clean);
+}
+
+/* The style each design system brings, measured with one palette on it: what it decides (focus ring, small text, weights, families). */
+export function styles(sample: PaletteOption | undefined) {
+  return DESIGN_SYSTEMS.map((d) => ({ ...d, findings: sample ? checkStyle(resolveBoth(sample.brand, d.name)) : [] }));
 }

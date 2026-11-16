@@ -78,6 +78,45 @@ test("the options move to another design system without reading the site again",
   for (const o of r.body.options) assert.equal(o.tokens.light["piq-button-radius"], "0");
 });
 
+test("each design system's style is measured against the theme rules; an option can be adjusted and stays within them", async () => {
+  assert.deepEqual(green.styles.map((x: any) => x.name).sort(), ["carbon", "databricks", "fluent", "material"]);
+  for (const st of green.styles) for (const f of st.findings) {
+    assert.ok(["theme.focus-ring", "theme.small-text-floor", "theme.weights", "theme.families-limited", "theme.surface-separation", "theme.dark-appearance"].includes(f.rule), `${st.name}: ${f.rule}`);
+    assert.ok(f.title && f.message);
+  }
+  assert.ok(green.adjustable.some((r: any) => r.name === "chromaScale" && r.min === 0.5 && r.max === 1.5));
+  const base = green.options[0];
+  const r = await call("POST", `/api/brand/captures/${green.id}/adjust`, { optionId: base.id, designSystem: "material", adjust: { chromaScale: 0.6, groundLight: 1 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.id, base.id);
+  assert.deepEqual(r.body.adjusted, { chromaScale: 0.6, groundLight: 1 });
+  assert.equal(r.body.settings.chromaScale, 0.6);
+  assert.notEqual(r.body.swatches.light.structure, base.swatches.light.structure, "a softer brand colour");
+  assert.equal(r.body.swatches.light.ground, "#FFFFFF", "a white page");
+  assert.deepEqual(r.body.findings.filter((f: any) => f.severity === "error"), []);
+  const bad = await call("POST", `/api/brand/captures/${green.id}/adjust`, { optionId: "no-such-option", designSystem: "material", adjust: {} });
+  assert.equal(bad.body.code, "ADJUST_FAILED");
+  const tooFar = await call("POST", `/api/brand/captures/${green.id}/adjust`, { optionId: "two-colour", designSystem: "material", adjust: { chromaScale: 0.6, groundLight: 1 } });
+  if (tooFar.status !== 200) assert.match(tooFar.body.message, /cannot meet the contrast rules \(.+\)/, "a setting the rules cannot meet says why");
+});
+
+test("a brand from a logo file: its colours, no screenshot, the default style; an SVG is served so nothing in it runs", async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="#0b6e4f"/><path d="M20 8 L30 28 H10 Z" fill="#f2a541"/></svg>';
+  const r = await call("POST", "/api/brand/captures/logo", { filename: "evergreen-logo.svg", data: Buffer.from(svg).toString("base64") });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.source, "logo");
+  assert.equal(r.body.screenshot, null);
+  assert.equal(r.body.name, "evergreen");
+  assert.equal(r.body.analysis.colours[0].hex, "#0b6e4f");
+  assert.ok(r.body.analysis.colours.some((c: any) => c.hex === "#f2a541"));
+  assert.equal(r.body.designSystem, "databricks");
+  assert.equal(r.body.options.length, 3);
+  const file = await fetch(API + r.body.logo);
+  assert.equal(file.headers.get("content-type")?.split(";")[0], "image/svg+xml");
+  assert.match(String(file.headers.get("content-security-policy")), /default-src 'none'/);
+  assert.equal((await call("POST", "/api/brand/captures/logo", { filename: "notes.txt", data: Buffer.from("hello").toString("base64") })).body.code, "LOGO_UNSUPPORTED");
+});
+
 test("a red site: red stays the brand's, not the buttons', links' or focus's", async () => {
   const r = await call("POST", "/api/brand/captures", { url: `${SITES}/crimson/` });
   assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -106,8 +145,11 @@ test("the chosen option is kept as a brand kit, with its tokens and a DTCG expor
   assert.equal(dtcg.body.light.color.structure.$value.colorSpace, "srgb");
   assert.equal(dtcg.body.light.color.structure.$value.components.length, 3);
   assert.deepEqual(dtcg.body.font.body.$value.slice(0, 1), ["Roboto"]);
-  const again = await call("POST", "/api/brand/kits", { captureId: green.id, optionId: green.options[0].id, designSystem: "material" });
+  const again = await call("POST", "/api/brand/kits", { captureId: green.id, optionId: green.options[0].id, designSystem: "material", adjust: { chromaScale: 0.6 } });
   assert.equal(again.body.id, "evergreen-legal-2", "a second kit of the same name gets its own id");
+  assert.deepEqual(again.body.option.adjusted, { chromaScale: 0.6 }, "an adjusted option is kept as adjusted");
+  const adjusted = await call("POST", `/api/brand/captures/${green.id}/adjust`, { optionId: green.options[0].id, designSystem: "material", adjust: { chromaScale: 0.6 } });
+  assert.equal((await call("GET", `/api/brand/kits/${again.body.id}/tokens`)).body.light["piq-color-structure"], adjusted.body.tokens.light["piq-color-structure"]);
 });
 
 test("an app wears a kit; unknown themes and kits are refused; a kit in use cannot be removed", async () => {
@@ -123,6 +165,11 @@ test("an app wears a kit; unknown themes and kits are refused; a kit in use cann
   assert.equal((await call("DELETE", `/api/brand/kits/${kit.id}`)).body.code, "BRAND_KIT_IN_USE");
   const listed = await call("GET", "/api/brand/kits");
   assert.deepEqual(listed.body.kits.find((k: any) => k.id === kit.id).usedBy.map((a: any) => a.id), [id]);
+  const started = await call("POST", "/api/apps", { name: "Intake", brandKit: kit.id, designSystem: "material", appearance: "dark" });
+  assert.equal(started.status, 201, JSON.stringify(started.body));
+  assert.deepEqual(started.body.definition.extensions["umf.ux"].look, { theme: "plain", appearance: "dark", brandKit: kit.id, designSystem: "material" }, "a new app can wear a kit from the start");
+  assert.equal((await call("POST", "/api/apps", { name: "Nope", brandKit: "no-such-kit" })).body.code, "BRAND_KIT_UNKNOWN");
+  await call("POST", `/api/apps/${started.body.definition.id}/operations`, { operations: [{ op: "setLook", args: { brandKit: "" } }], summary: "look" });
   const off = await ops({ brandKit: "" });
   assert.equal(off.body.definition.extensions["umf.ux"].look.brandKit, undefined);
   assert.equal((await call("DELETE", `/api/brand/kits/${kit.id}`)).status, 200);

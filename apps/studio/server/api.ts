@@ -33,9 +33,9 @@ export function createApi({ agent }: { agent: AgentRoutes }) {
   app.get("/api/apps", (_req, res) => { res.json({ apps: listApps() }); });
 
   app.post("/api/apps", wrap(async (req, res) => {
-    const { name, description, useCase, theme, id, definition } = req.body ?? {};
+    const { name, description, useCase, theme, brandKit, designSystem, appearance, id, definition } = req.body ?? {};
     if (!name && !definition) throw new AppError(400, "NAME_REQUIRED", "Give the app a name");
-    const rec = await createAppRecord({ id, name: name ?? definition.extensions["umf.app"].name, description, useCase, theme, definition, by: req.body?.by ?? "person" });
+    const rec = await createAppRecord({ id, name: name ?? definition.extensions["umf.app"].name, description, useCase, theme, brandKit, designSystem, appearance, definition, by: req.body?.by ?? "person" });
     res.status(201).json(view(rec));
   }));
 

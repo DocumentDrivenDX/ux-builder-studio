@@ -14,7 +14,9 @@ export interface AppCtx {
   resetData(): Promise<RoomResult>;
   captureBrand(input: { url: string }): Promise<RoomResult>;
   setBrandDesignSystem(input: { designSystem: string }): Promise<RoomResult>;
-  chooseBrandOption(input: { option: string; name?: string }): Promise<RoomResult>;
+  chooseBrandOption(input: { option: string; name?: string; appearance?: "system" | "light" | "dark" }): Promise<RoomResult>;
+  adjustBrandOption(input: { option: string; hueShift?: number; chromaScale?: number; neutralTint?: number; stateHarmony?: number; groundLight?: number; groundDark?: number }): Promise<RoomResult>;
+  captureBrandLogo(): RoomResult;
   applyBrandKit(input: { kit: string }): Promise<RoomResult>;
   stopBrandKit(): Promise<RoomResult>;
 }
@@ -121,9 +123,42 @@ export const appRoom: RoomCatalog<AppCtx> = {
       title: "Use a brand option",
       description: "Keeps one of the captured brand's options as a brand kit in the studio's library (under the name given, else the site's name) and dresses the app in it. Choose for the person only when they ask you to.",
       control: "An option's Use this option button in the Brand and style panel",
-      input: { type: "object", properties: { option: { type: "string", description: "An option id from the brand observation" }, name: { type: "string", description: "The kit's name" } }, required: ["option"], additionalProperties: false },
+      input: { type: "object", properties: { option: { type: "string", description: "An option id from the brand observation" }, name: { type: "string", description: "The kit's name" }, appearance: { type: "string", enum: ["system", "light", "dark"], description: "The app's default appearance (default: automatic, or dark for a dark site)" } }, required: ["option"], additionalProperties: false },
       effect: "edit",
       run: (ctx, input) => ctx.chooseBrandOption(input as never),
+    },
+    {
+      kind: "action",
+      id: "adjust-brand-option",
+      title: "Adjust a brand option",
+      description: "Makes one of the captured brand's options again with changed engine settings, when the person says it is not quite right (\"a bit darker\", \"less orange\", \"greyer backgrounds\"). Only the settings given change; earlier adjustments to the option are kept. The engine refits the result to the contrast rules, so never pick colours yourself. hueShift: degrees (-30 to 30) to rotate the brand hue. chromaScale: colour strength (0.5 muted to 1.5 vivid; 1 as found). neutralTint: how much greys and backgrounds take the brand hue (0 pure grey to 2). stateHarmony: how far status colours lean to the brand (0 to 1). groundLight: page lightness in light (0.94 to 1). groundDark: page lightness in dark (0.1 deep to 0.26). Returns the new colours and any rules to review; the person still chooses.",
+      control: "An option's Adjust this option sliders in the Brand and style panel",
+      input: {
+        type: "object",
+        properties: {
+          option: { type: "string", description: "An option id from the brand observation" },
+          hueShift: { type: "number", minimum: -30, maximum: 30, "x-unit": "°" },
+          chromaScale: { type: "number", minimum: 0.5, maximum: 1.5, "x-unit": "×" },
+          neutralTint: { type: "number", minimum: 0, maximum: 2, "x-unit": "×" },
+          stateHarmony: { type: "number", minimum: 0, maximum: 1, "x-unit": "fraction (0 to 1)" },
+          groundLight: { type: "number", minimum: 0.94, maximum: 1, "x-unit": "OKLCH lightness (0 to 1)" },
+          groundDark: { type: "number", minimum: 0.1, maximum: 0.26, "x-unit": "OKLCH lightness (0 to 1)" },
+        },
+        required: ["option"],
+        additionalProperties: false,
+      },
+      effect: "edit",
+      run: (ctx, input) => ctx.adjustBrandOption(input as never),
+    },
+    {
+      kind: "action",
+      id: "ask-for-logo",
+      title: "Ask for a logo file",
+      description: "Shows the Brand and style panel, where the person adds their logo file (SVG or PNG); you cannot add a file yourself. Use it when there is no website, or the person would rather start from the logo.",
+      control: "The Brand and style panel's logo file picker",
+      input: { type: "object", properties: {}, additionalProperties: false },
+      effect: "view",
+      run: (ctx) => ctx.captureBrandLogo(),
     },
     {
       kind: "action",
@@ -166,7 +201,7 @@ export const appRoom: RoomCatalog<AppCtx> = {
     },
     {
       id: "brand",
-      description: "The app's look and the brand step: the theme or brand kit it wears, the website brand captured (colours and where each was seen, fonts, the suggested design system, the three options with what each does and any colour rules to review), and the kits in the library",
+      description: "The app's look and the brand step: the theme or brand kit it wears, the brand captured from a website or logo (colours and where each was seen, fonts, the suggested design system and what each design system settles of the style rules, the three options with their settings, any adjustments, and any colour rules to review), and the kits in the library",
       schema: { type: "object", properties: { look: { type: "string" }, busy: { type: "string" }, capture: { type: "string", description: "The capture as JSON, or empty" }, kits: { type: "array", items: { type: "string" } } } },
     },
   ],

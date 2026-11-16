@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { apply, createApp, makeVariant, OpError, OPERATION_SCHEMAS, putScreen, setNavigation, summarize } from "@ux-builder/app-definition";
+import { apply, createApp, makeVariant, OpError, OPERATION_SCHEMAS, putScreen, setLook, setNavigation, summarize } from "@ux-builder/app-definition";
 import Ajv from "ajv";
 import manifest from "@ux-builder/tokens/manifest.json" with { type: "json" };
 import type { AppDefinition } from "@ux-builder/app-runtime/contract";
@@ -125,10 +125,14 @@ async function save(doc: AppDefinition, meta: Omit<VersionMeta, "version" | "at"
   return { definition: doc, verdict, version, history: [...history, entry], redeployed: dataChanged };
 }
 
-export async function createAppRecord({ id, name, description, useCase, theme, definition, by = "person" }: { id?: string; name: string; description?: string; useCase?: string; theme?: string; definition?: AppDefinition; by?: string }) {
+/* A new app's look can be decided before it is built: a theme, or a brand kit from the library (on its design system), and a default appearance. */
+export type StartingLook = { theme?: string; brandKit?: string; designSystem?: string; appearance?: "system" | "light" | "dark" };
+
+export async function createAppRecord({ id, name, description, useCase, theme, brandKit, designSystem, appearance, definition, by = "person" }: { id?: string; name: string; description?: string; useCase?: string; definition?: AppDefinition; by?: string } & StartingLook) {
   const appId = definition?.id ?? id ?? `app.${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   if (existsSync(join(dirOf(appId), "definition.json"))) throw new AppError(409, "APP_EXISTS", `An app ${appId} already exists`);
-  const doc = definition ?? starterDefinition({ id: appId, name, description, useCase, theme });
+  let doc = definition ?? starterDefinition({ id: appId, name, description, useCase, theme });
+  if (!definition && (brandKit || appearance)) doc = setLook(doc, { ...(brandKit ? { brandKit, designSystem } : {}), ...(appearance ? { appearance } : {}) }) as AppDefinition;
   checkLook(doc);
   return save(doc, { by, summary: definition ? `Imported ${name}` : `Created ${name}`, operations: [] });
 }

@@ -66,7 +66,16 @@ export function AppRoom() {
     },
     async chooseBrandOption(input) {
       s.setPanel("brand");
+      if (input.appearance) b.setAppearance(input.appearance);
       return asRoom(await b.chooseOption(input.option, input.name, "assistant"));
+    },
+    async adjustBrandOption({ option, ...adjust }) {
+      s.setPanel("brand");
+      return asRoom(await b.adjustOption(option, adjust as Record<string, number>));
+    },
+    captureBrandLogo() {
+      s.setPanel("brand");
+      return { ok: true, data: { shown: "The Brand and style panel; the person adds the logo file there" } };
     },
     async applyBrandKit(input) {
       return asRoom(await b.applyKit(input.kit, "assistant"));
@@ -103,7 +112,10 @@ export function AppRoom() {
           site: b.capture.finalUrl, name: b.capture.name,
           colours: b.capture.analysis.colours.map((c) => `${c.hex} (${c.sources.map((x) => x.label).join(", ")})`),
           fonts: b.capture.analysis.fonts, style: b.capture.analysis.style.reason, designSystem: b.capture.designSystem,
-          options: b.capture.options.map((o) => ({ id: o.id, title: o.title, description: o.description, buttons: o.swatches.light.structure, links: o.swatches.light.accent, review: o.findings.map((f) => `${f.rule} (${f.appearance}): ${f.message}`) })),
+          source: b.capture.source,
+          styles: b.capture.styles.map((x) => `${x.name}${x.name === b.capture!.analysis.style.designSystem ? " (suggested)" : ""}: ${x.findings.length ? x.findings.map((f) => `${f.rule}: ${f.message}`).join("; ") : "meets the style rules"}`),
+          defaultAppearance: b.appearance,
+          options: b.options.map((o) => ({ id: o.id, title: o.title, description: o.description, buttons: o.swatches.light.structure, links: o.swatches.light.accent, page: o.swatches.light.ground, settings: o.settings, adjusted: o.adjusted ?? null, review: o.findings.map((f) => `${f.rule} (${f.appearance}): ${f.message}`) })),
           notes: b.capture.notes,
         }) : "",
         kits: b.kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`),

@@ -42,13 +42,22 @@ recorded build (a time tracker), which is what the tests use.
 | `packages/app-definition` | The `umf.app` and `umf.ux` vocabularies, app profile 0.1, the expression language, the engine, the typed operations, and the diagrams read from a definition |
 | `packages/app-runtime` | Renders a definition with ux-builder widgets and patterns only |
 | `vendor/ux-builder` | ux-builder, as a submodule pinned to a commit |
-| `patches/` | Changes to ux-builder the studio needs that are not upstream yet; `npm run setup` applies them |
+| `patches/` | ux-builder's open pull requests and the studio's own change to it, not merged yet; `npm run setup` applies them |
 
 ## ux-builder as a submodule
 
 The studio builds on parts of ux-builder that are not published to npm (the
-palette engine and the UX rules catalog), so it uses the repository itself,
-pinned to a commit. To move to a newer ux-builder:
+palette engine, the theme checks and the UX rules catalog), so it uses the
+repository itself: `vendor/ux-builder`, pinned to ux-builder's `main`.
+`npm run setup` applies the files in `patches/` to it, in order:
+
+| Patch | What |
+|---|---|
+| `01-ux-builder-prs-80-81-82.patch` | ux-builder's open PRs #80 (the original themes restored beside the vk- themes), #81 (theme checks: ten theme and colour rules measured on every theme) and #82 (blue accents on the original themes) |
+| `02-ux-builder-pr-83.patch` | ux-builder's open PR #83 (e2e cold-start fix, licence records) |
+| `03-ux-builder-ui-replying-phrases.patch` | The studio's change to ux-builder's Conversation: rotating "replying" phrases |
+
+To move to a newer ux-builder:
 
 ```sh
 git -C vendor/ux-builder fetch && git -C vendor/ux-builder checkout <commit>
@@ -56,8 +65,8 @@ npm install && npm run setup && npm run check
 git add vendor/ux-builder && git commit
 ```
 
-When a patch in `patches/` lands upstream, delete it in the same commit that
-moves the submodule past it.
+When a patch lands upstream, delete it in the same commit that moves the
+submodule past it.
 
 ## Checks
 

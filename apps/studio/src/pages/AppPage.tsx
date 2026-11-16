@@ -2,7 +2,7 @@
    each has the whole width. The preview is the app itself (rendered from its
    definition by @ux-builder/app-runtime, on the Postgres tables UMF deployed),
    signed in as one of its sample people. */
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Dialog, Notice, StatusPill, registerIcons } from "@ux-builder/ui";
 import { iconDatabase, iconHistory, iconInfo, iconListChecks, iconNetwork, iconPalette, iconPanelsTopLeft, iconServer, iconZap } from "@ux-builder/ui/icons";
 import { Cluster, ConfirmDialog, Page, PageHeader, PrimaryNav, Stack } from "@ux-builder/ui/patterns";
@@ -22,11 +22,32 @@ export function AppPage() {
   return (
     <StudioProvider appId={appId}>
       <BrandProvider>
+        <StartFromLink />
         <AppRoom />
         <Builder />
       </BrandProvider>
     </StudioProvider>
   );
+}
+
+/* A link into the builder may ask for a section and a brand to read first:
+   ?panel=brand&brand=<website> (the New app form's "Our website's brand").
+   It is acted on once, then dropped from the address. */
+function StartFromLink() {
+  const s = useStudio();
+  const b = useBrand();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current || !s.view) return;
+    done.current = true;
+    const q = new URLSearchParams(window.location.search);
+    const panel = q.get("panel"), site = q.get("brand");
+    if (!panel && !site) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (panel && PANELS.some((p) => p.id === panel)) s.setPanel(panel as Panel);
+    if (site) void b.captureFromUrl(site);
+  }, [s.view, s, b]);
+  return null;
 }
 
 registerIcons(iconInfo, iconPalette, iconDatabase, iconPanelsTopLeft, iconZap, iconNetwork, iconListChecks, iconHistory, iconServer);

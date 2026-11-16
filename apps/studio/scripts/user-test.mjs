@@ -422,13 +422,29 @@ await step("Bring in the firm's brand from its website: three options, one chose
   check((await panels().getByLabel("Style (design system)").inputValue()) === "material", "pill-shaped buttons suggest Material");
   check((await panels().getByText("Meets the colour rules").count()) >= 1, "at least one option meets every colour rule");
   await shot("brand-options");
-  await panels().getByRole("radio", { name: "Dark" }).click();
+  await panels().getByRole("radiogroup", { name: "Show in" }).getByRole("radio", { name: "Dark" }).click();
   await wait(500);
   check((await panels().locator('[data-appearance-shown="dark"]').count()) === 3, "the options can be tried in dark");
   await shot("brand-options-dark");
-  await panels().getByRole("radio", { name: "Light" }).click();
+  await panels().getByRole("radiogroup", { name: "Show in" }).getByRole("radio", { name: "Light" }).click();
+  check(await panels().locator(".studio-brand__style").isVisible(), "the chosen style says what it settles of the theme rules");
+  // Not quite right: make the second option softer, on pure greys.
   const second = options.nth(1);
+  const before = (await second.locator(".studio-swatch").first().locator("code").innerText()).trim();
+  await second.getByText("Adjust this option").click();
+  const setRange = async (label, v) => second.getByLabel(new RegExp(`^${label} for`)).evaluate((el, value) => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, String(v));
+  await setRange("Colour strength", 0.6);
+  await setRange("Tint of greys and backgrounds", 0);
+  await second.getByRole("button", { name: "Try these settings" }).click();
+  await second.getByText("Adjusted", { exact: true }).waitFor({ timeout: 30000 });
   const buttons = (await second.locator(".studio-swatch").first().locator("code").innerText()).trim();
+  check(buttons !== before, `the adjusted option is made again (buttons ${before} → ${buttons})`);
+  const ground = (await second.locator(".studio-swatch").nth(2).locator("code").innerText()).trim();
+  check(ground.slice(1, 3) === ground.slice(3, 5) && ground.slice(3, 5) === ground.slice(5, 7), `on a pure grey page (${ground})`);
+  await shot("brand-option-adjusted");
   await second.getByRole("button", { name: "Use this option" }).click();
   await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
   check((await panels().locator(".studio-brand__kits").innerText()).includes("Evergreen Legal"), "the choice is kept as a brand kit in the library");
@@ -471,6 +487,44 @@ await step("Open the app on its own, as its people use it", async ({ check, shot
   await shot("app-standalone-phone");
 });
 
+
+await step("Start a new app with its look decided up front: a red brand's website", async ({ check, shot }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(WEB, { waitUntil: "networkidle" });
+  await wait(1000);
+  await page.getByLabel("App name").fill("Advisory matters");
+  await page.getByLabel("What should it do?").fill("Track advisory matters for each client.");
+  check((await page.getByRole("radiogroup", { name: "How should it look?" }).getByRole("radio", { name: "Our website's brand" }).getAttribute("aria-checked")) === "true", "a new app starts from the organisation's website by default");
+  await page.getByLabel("Website", { exact: true }).fill(SITE.replace("evergreen", "crimson"));
+  await shot("new-app-look");
+  await page.getByRole("button", { name: "Create app", exact: true }).click();
+  await page.waitForURL(/\/apps\/app\.advisory-matters/, { timeout: 60000 });
+  const options = panels().locator(".studio-brand__option");
+  await options.nth(0).waitFor({ timeout: 90000 });
+  check((await page.locator(".builder__section-title").innerText()).trim() === "Brand and style", "the app opens on its Brand and style section");
+  check((await panels().innerText()).includes("red is kept for errors"), "the studio says why the brand's red stays off buttons and links");
+  check((await panels().getByLabel("Style (design system)").inputValue()) === "fluent", "slightly rounded buttons suggest Fluent");
+  await shot("new-app-brand-options");
+  await options.nth(0).getByRole("button", { name: "Use this option" }).click();
+  await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
+  // Nothing is built yet (no screens or sample people), but the app already wears its brand.
+  const def = await fetch(`${API}/api/apps/app.advisory-matters`).then((r) => r.json());
+  check(def.definition.extensions["umf.ux"].look.brandKit === "crimson-co", "the new app wears the Crimson & Co. kit before anything else is built");
+  await showTab("App preview");
+  check((await page.locator(".builder__kit").innerText()).includes("Crimson & Co."), "the preview toolbar names the kit");
+  const tokens = await fetch(`${API}/api/brand/kits/crimson-co/tokens`).then((r) => r.json());
+  const structure = tokens.light["piq-color-structure"];
+  const { h, C } = await page.evaluate((hex) => {
+    const lin = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16) / 255));
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s2 = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s2, B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s2;
+    return { C: Math.hypot(A, B), h: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 };
+  }, structure);
+  check(!(C >= 0.1 && (h < 45 || h > 340)), `its primary buttons are not red (${structure})`);
+  await settle();
+  await shot("new-app-preview");
+});
 }
 await browser.close();
 const errors = consoleLog.filter((l) => l.startsWith("[error]") || l.startsWith("[pageerror]"));

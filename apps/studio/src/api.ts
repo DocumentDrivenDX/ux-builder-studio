@@ -19,7 +19,7 @@ export const api = {
   health: () => call<{ ok: boolean; umf: string; database: string; agent: boolean }>("GET", "/api/health"),
   themes: () => call<{ themes: Array<{ name: string; title: string; designSystem: string; default: string }> }>("GET", "/api/themes"),
   apps: () => call<{ apps: CatalogEntry[] }>("GET", "/api/apps"),
-  createApp: (input: { name: string; useCase?: string; description?: string; theme?: string; by?: string }) => call<AppView>("POST", "/api/apps", input),
+  createApp: (input: { name: string; useCase?: string; description?: string; theme?: string; brandKit?: string; designSystem?: string; appearance?: string; by?: string }) => call<AppView>("POST", "/api/apps", input),
   app: (id: string) => call<AppView>("GET", `/api/apps/${encodeURIComponent(id)}`),
   apply: (id: string, operations: Array<{ op: string; args?: unknown }>, summary?: string, by = "person") => call<AppView & { redeployed: boolean }>("POST", `/api/apps/${encodeURIComponent(id)}/operations`, { operations, summary, by }),
   variant: (id: string, input: { name: string; note?: string; by?: string }) => call<AppView>("POST", `/api/apps/${encodeURIComponent(id)}/variants`, input),
@@ -30,8 +30,10 @@ export const api = {
   designSystems: () => call<{ designSystems: DesignSystemInfo[] }>("GET", "/api/brand/design-systems"),
   captureBrand: (url: string, designSystem?: string) => call<BrandCapture>("POST", "/api/brand/captures", { url, designSystem }),
   brandCapture: (id: string, designSystem?: string) => call<BrandCapture>("GET", `/api/brand/captures/${encodeURIComponent(id)}${designSystem ? `?designSystem=${encodeURIComponent(designSystem)}` : ""}`),
+  brandFromLogo: (filename: string, data: string, designSystem?: string) => call<BrandCapture>("POST", "/api/brand/captures/logo", { filename, data, designSystem }),
+  adjustBrandOption: (captureId: string, input: { optionId: string; designSystem: string; adjust: Record<string, number> }) => call<PaletteOption>("POST", `/api/brand/captures/${encodeURIComponent(captureId)}/adjust`, input),
   brandKits: () => call<{ kits: BrandKit[] }>("GET", "/api/brand/kits"),
-  saveBrandKit: (input: { captureId: string; optionId: string; designSystem: string; name?: string }) => call<BrandKit>("POST", "/api/brand/kits", input),
+  saveBrandKit: (input: { captureId: string; optionId: string; designSystem: string; name?: string; adjust?: Record<string, number> }) => call<BrandKit>("POST", "/api/brand/kits", input),
   removeBrandKit: (id: string) => call<{ ok: true }>("DELETE", `/api/brand/kits/${encodeURIComponent(id)}`),
   brandKitTokens: (id: string) => call<KitTokens>("GET", `/api/brand/kits/${encodeURIComponent(id)}/tokens`),
 };
@@ -39,11 +41,14 @@ export const api = {
 /* Brand: a website's brand, the palette options made from it, and kits. */
 export type DesignSystemInfo = { name: string; title: string; summary: string };
 export type KitTokens = { light: Record<string, string>; dark: Record<string, string> };
-export type ColourFinding = { rule: string; appearance: "light" | "dark" | "both"; severity: "error" | "review"; message: string };
+export type ColourFinding = { rule: string; title: string; appearance: "light" | "dark" | "both"; severity: "error" | "review"; message: string };
+export type StyleInfo = DesignSystemInfo & { findings: ColourFinding[] };
+export type AdjustRange = { name: string; label: string; min: number; max: number; default: number; step: number };
 export type Swatches = Record<"structure" | "accent" | "ground" | "surface" | "text", string>;
-export type PaletteOption = { id: string; title: string; description: string; strategy: string; tokens: KitTokens; swatches: Record<"light" | "dark", Swatches>; findings: ColourFinding[] };
+export type PaletteOption = { id: string; title: string; description: string; strategy: string; tokens: KitTokens; swatches: Record<"light" | "dark", Swatches>; findings: ColourFinding[]; settings: Record<string, number>; adjusted?: Record<string, number> };
 export type BrandCapture = {
-  id: string; url: string; finalUrl: string; title: string; name: string; capturedAt: string; screenshot: string; logo: string | null;
+  id: string; source: "website" | "logo"; url: string; finalUrl: string; title: string; name: string; capturedAt: string; screenshot: string | null; logo: string | null;
+  styles: StyleInfo[]; adjustable: AdjustRange[];
   analysis: {
     colours: Array<{ hex: string; share: number; sources: Array<{ kind: string; label: string }> }>;
     monochrome: boolean;
@@ -55,7 +60,7 @@ export type BrandCapture = {
 };
 export type BrandKit = {
   id: string; name: string; createdAt: string; source: { url: string; title: string; captureId: string } | null; designSystem: string;
-  option: { id: string; title: string; description: string; strategy: string };
+  option: { id: string; title: string; description: string; strategy: string; adjusted?: Record<string, number> };
   swatches: { structure?: string; accent?: string; ground?: string; surface?: string };
   colours: Array<{ hex: string; sources: string[] }>; findings: ColourFinding[]; usedBy: Array<{ id: string; name: string }>;
 };

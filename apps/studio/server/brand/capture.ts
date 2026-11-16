@@ -75,3 +75,21 @@ export async function capture(input: string, { timeoutMs = 30000 } = {}): Promis
     await browser.close().catch(() => {});
   }
 }
+
+/* An SVG logo drawn in the browser (as an image, so nothing in it runs) and
+   returned as a PNG, so its colours are measured by the area they cover, as
+   ux-builder's theme builder does, not by how often the markup names them. */
+export async function rasteriseSvg(svg: Buffer, size = 480): Promise<Buffer> {
+  const browser = await chromium.launch({ headless: true }).catch((e: Error) => {
+    throw new CaptureError("BROWSER_UNAVAILABLE", `The studio could not start its browser (${e.message.split("\n")[0]}). Run npm run setup once.`);
+  });
+  try {
+    const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
+    await page.setContent(`<html><body style="margin:0;background:transparent"><img id="logo" style="max-width:${size}px;max-height:${size}px;width:${size}px;height:auto" src="data:image/svg+xml;base64,${svg.toString("base64")}"></body></html>`);
+    const img = page.locator("#logo");
+    await img.evaluate((el: any) => (el.complete ? null : new Promise((r) => { el.onload = r; el.onerror = r; })));
+    return await img.screenshot({ omitBackground: true, timeout: 5000 });
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}

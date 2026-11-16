@@ -6,10 +6,10 @@
 import type express from "express";
 import { type NextFunction, type Request, type Response } from "express";
 import { AppError, listApps } from "../apps.js";
-import { analyseCapture } from "./analyse.js";
-import { capture, CaptureError } from "./capture.js";
+import { analyseCapture, analyseLogo } from "./analyse.js";
+import { capture, CaptureError, rasteriseSvg } from "./capture.js";
 import { toDtcg } from "./dtcg.js";
-import { paletteOptions } from "./options.js";
+import { adjustOption, adjustRanges, paletteOptions, type Adjustment } from "./options.js";
 import { captureFile, getCapture, getKit, listKits, newId, removeKit, saveCapture, saveKit, type BrandKit, type CaptureRecord } from "./store.js";
 import { DESIGN_SYSTEMS, resolveBoth, type Resolved } from "./tokens.js";
 
@@ -20,16 +20,19 @@ const isDesignSystem = (v: unknown): v is string => DESIGN_SYSTEMS.some((d) => d
 let queue: Promise<unknown> = Promise.resolve();
 const serial = <T>(fn: () => Promise<T>) => { const next = queue.then(fn, fn); queue = next.catch(() => {}); return next; };
 
-/* "Acme | Legal software for…" → "Acme". */
-const nameOf = (rec: CaptureRecord) => (rec.siteName ?? rec.title.split(/\s+[|–—·:-]\s+/)[0] ?? rec.title).trim() || new URL(rec.finalUrl).hostname;
+/* "Acme | Legal software for…" → "Acme"; a logo file is named after the file. */
+const nameOf = (rec: CaptureRecord) => rec.source === "logo"
+  ? rec.title
+  : (rec.siteName ?? rec.title.split(/\s+[|–—·:-]\s+/)[0] ?? rec.title).trim() || new URL(rec.finalUrl).hostname;
 
 function captureView(rec: CaptureRecord, designSystem?: string) {
   const ds = isDesignSystem(designSystem) ? designSystem : rec.analysis.style.designSystem;
-  const { options, notes } = paletteOptions(rec.analysis, ds);
+  const { options, notes, styles } = paletteOptions(rec.analysis, ds);
+  const logoFile = rec.logoType === "svg" ? "logo.svg" : "logo.png";
   return {
-    id: rec.id, url: rec.url, finalUrl: rec.finalUrl, title: rec.title, name: nameOf(rec), capturedAt: rec.capturedAt,
-    screenshot: `/api/brand/captures/${rec.id}/screenshot.png`, logo: rec.hasLogo ? `/api/brand/captures/${rec.id}/logo.png` : null,
-    analysis: rec.analysis, designSystem: ds, options, notes: [...rec.analysis.warnings, ...notes],
+    id: rec.id, source: rec.source ?? "website", url: rec.url, finalUrl: rec.finalUrl, title: rec.title, name: nameOf(rec), capturedAt: rec.capturedAt,
+    screenshot: rec.source === "logo" ? null : `/api/brand/captures/${rec.id}/screenshot.png`, logo: rec.hasLogo ? `/api/brand/captures/${rec.id}/${logoFile}` : null,
+    analysis: rec.analysis, designSystem: ds, options, styles, adjustable: adjustRanges(), notes: [...rec.analysis.warnings, ...notes],
   };
 }
 
@@ -37,11 +40,25 @@ export async function captureBrand(url: string, designSystem?: string) {
   const rec = await serial(async () => {
     const cap = await capture(url);
     const analysis = await analyseCapture(cap);
-    const r: CaptureRecord = { id: newId(), url: cap.url, finalUrl: cap.finalUrl, title: cap.facts.title, siteName: cap.facts.siteName, capturedAt: new Date().toISOString(), hasLogo: !!cap.logo, analysis };
+    const r: CaptureRecord = { id: newId(), source: "website", url: cap.url, finalUrl: cap.finalUrl, title: cap.facts.title, siteName: cap.facts.siteName, capturedAt: new Date().toISOString(), hasLogo: !!cap.logo, analysis };
     saveCapture(r, { screenshot: cap.screenshot, logo: cap.logo });
     return r;
   });
   return captureView(rec, designSystem);
+}
+
+/* A brand from a logo file the person gives (SVG or PNG, at most 2 MB). */
+export async function logoBrand(filename: string, bytes: Buffer, designSystem?: string) {
+  const isPng = bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isSvg = !isPng && /<svg[\s>]/i.test(bytes.subarray(0, 4096).toString("utf8"));
+  if (!isPng && !isSvg) throw new AppError(400, "LOGO_UNSUPPORTED", "The logo must be an SVG or PNG file");
+  if (bytes.length > 2 * 1024 * 1024) throw new AppError(413, "LOGO_TOO_LARGE", "The logo is larger than 2 MB");
+  const measured = isSvg ? await serial(() => rasteriseSvg(bytes)).catch(() => bytes) : bytes;
+  const analysis = await analyseLogo(new Uint8Array(measured));
+  const title = filename.replace(/\.(svg|png)$/i, "").replace(/[-_]+/g, " ").replace(/\blogo\b/i, "").trim() || "Brand";
+  const r: CaptureRecord = { id: newId(), source: "logo", url: `file:${filename}`, finalUrl: `file:${filename}`, title, siteName: null, capturedAt: new Date().toISOString(), hasLogo: true, logoType: isSvg ? "svg" : "png", analysis };
+  saveCapture(r, { screenshot: null, logo: bytes });
+  return captureView(r, designSystem);
 }
 
 const kitSummary = (k: BrandKit) => {
@@ -80,28 +97,50 @@ export function mountBrand(app: express.Express) {
     if (!rec) throw new AppError(404, "CAPTURE_NOT_FOUND", `There is no capture ${req.params.id}`);
     res.json(captureView(rec, typeof req.query.designSystem === "string" ? req.query.designSystem : undefined));
   }));
-  for (const name of ["screenshot.png", "logo.png"] as const) {
+  for (const name of ["screenshot.png", "logo.png", "logo.svg"] as const) {
     app.get(`/api/brand/captures/:id/${name}`, (req, res) => {
       const file = captureFile(String(req.params.id), name);
       if (!file) return res.status(404).end();
-      res.type("png").set("cache-control", "private, max-age=31536000, immutable").sendFile(file);
+      // A person's SVG is shown as an image only: nothing in it may run, even opened directly.
+      if (name.endsWith(".svg")) res.set("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:");
+      res.type(name.endsWith(".svg") ? "image/svg+xml" : "png").set("cache-control", "private, max-age=31536000, immutable").sendFile(file);
     });
   }
+  app.post("/api/brand/captures/logo", wrap(async (req, res) => {
+    const { filename, data, designSystem } = req.body ?? {};
+    if (typeof data !== "string" || !data) throw new AppError(400, "LOGO_REQUIRED", "Give the logo file");
+    res.status(201).json(await logoBrand(String(filename ?? "logo"), Buffer.from(data.replace(/^data:[^,]*,/, ""), "base64"), designSystem));
+  }));
+  app.post("/api/brand/captures/:id/adjust", wrap((req, res) => {
+    const rec = getCapture(String(req.params.id));
+    if (!rec) throw new AppError(404, "CAPTURE_NOT_FOUND", `There is no capture ${req.params.id}`);
+    const { optionId, designSystem, adjust } = req.body ?? {};
+    if (!isDesignSystem(designSystem)) throw new AppError(400, "DESIGN_SYSTEM_UNKNOWN", `Choose a design system: ${DESIGN_SYSTEMS.map((d) => d.name).join(", ")}`);
+    try {
+      res.json(adjustOption(rec.analysis, designSystem, String(optionId ?? ""), (adjust ?? {}) as Adjustment));
+    } catch (e: any) {
+      throw new AppError(422, "ADJUST_FAILED", String(e?.message ?? e));
+    }
+  }));
 
   app.get("/api/brand/kits", (_req, res) => { res.json({ kits: listKits().map(kitSummary) }); });
   app.post("/api/brand/kits", wrap((req, res) => {
-    const { captureId, optionId, designSystem, name } = req.body ?? {};
+    const { captureId, optionId, designSystem, name, adjust } = req.body ?? {};
     const rec = getCapture(String(captureId ?? ""));
     if (!rec) throw new AppError(404, "CAPTURE_NOT_FOUND", `There is no capture ${captureId}`);
     if (!isDesignSystem(designSystem)) throw new AppError(400, "DESIGN_SYSTEM_UNKNOWN", `Choose a design system: ${DESIGN_SYSTEMS.map((d) => d.name).join(", ")}`);
     const { options } = paletteOptions(rec.analysis, designSystem);
-    const option = options.find((o) => o.id === optionId);
+    let option = options.find((o) => o.id === optionId);
     if (!option) throw new AppError(404, "OPTION_NOT_FOUND", `There is no option ${optionId}; options: ${options.map((o) => o.id).join(", ")}`);
+    if (adjust && Object.keys(adjust).length) {
+      try { option = adjustOption(rec.analysis, designSystem, option.id, adjust as Adjustment); }
+      catch (e: any) { throw new AppError(422, "ADJUST_FAILED", String(e?.message ?? e)); }
+    }
     const kit = saveKit({
       name: String(name ?? "").trim() || nameOf(rec),
       source: { url: rec.finalUrl, title: rec.title, captureId: rec.id },
       designSystem,
-      option: { id: option.id, title: option.title, description: option.description, strategy: option.strategy },
+      option: { id: option.id, title: option.title, description: option.description, strategy: option.strategy, ...(option.adjusted ? { adjusted: option.adjusted } : {}) },
       brand: option.brand,
       colours: rec.analysis.colours.map((c) => ({ hex: c.hex, sources: c.sources.map((s) => s.label) })),
       findings: option.findings,

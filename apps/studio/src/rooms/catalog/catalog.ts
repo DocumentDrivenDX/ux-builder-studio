@@ -3,7 +3,7 @@
 import type { RoomCatalog, RoomResult } from "@ouispec/bindings";
 
 export interface CatalogCtx {
-  createApp(input: { name: string; useCase?: string; description?: string; theme?: string }): Promise<RoomResult>;
+  createApp(input: { name: string; useCase?: string; description?: string; theme?: string; brandKit?: string; appearance?: "system" | "light" | "dark" }): Promise<RoomResult>;
   openApp(input: { appId: string }): RoomResult;
 }
 
@@ -16,7 +16,7 @@ export const catalogRoom: RoomCatalog<CatalogCtx> = {
       kind: "action",
       id: "create-app",
       title: "Create app",
-      description: "Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case.",
+      description: "Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case. Give a brand kit if the person named one; for a website, create the app, then use the app room's capture-brand action.",
       control: "The New app form on the catalog page",
       input: {
         type: "object",
@@ -24,7 +24,9 @@ export const catalogRoom: RoomCatalog<CatalogCtx> = {
           name: { type: "string", minLength: 1, maxLength: 80, description: "Short app name, e.g. Time tracker" },
           useCase: { type: "string", maxLength: 2000, description: "What the person asked for, in their words" },
           description: { type: "string", maxLength: 300, description: "One sentence on what the app does" },
-          theme: { type: "string", description: "Optional starting theme name (default plain)" },
+          theme: { type: "string", description: "Optional starting built-in theme (default plain)" },
+          brandKit: { type: "string", description: "Optional brand kit from the library the app wears from the start (see the catalog observation's kits)" },
+          appearance: { type: "string", enum: ["system", "light", "dark"], description: "Optional default appearance" },
         },
         required: ["name"],
         additionalProperties: false,
@@ -49,7 +51,7 @@ export const catalogRoom: RoomCatalog<CatalogCtx> = {
     {
       id: "catalog",
       description: "The apps in the catalog",
-      schema: { type: "object", properties: { count: { type: "integer" }, apps: { type: "array", items: { type: "string" }, description: "Each app as \"<id>: <name> (v<version>)\"" } } },
+      schema: { type: "object", properties: { count: { type: "integer" }, apps: { type: "array", items: { type: "string" }, description: "Each app as \"<id>: <name> (v<version>)\"" }, kits: { type: "array", items: { type: "string" }, description: "The brand kits in the library, each as \"<id>: <name> (<option>, <design system>)\"" } } },
     },
   ],
 };

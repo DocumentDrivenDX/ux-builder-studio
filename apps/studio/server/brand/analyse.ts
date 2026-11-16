@@ -92,6 +92,23 @@ export async function analyseCapture(c: Capture): Promise<BrandAnalysis> {
   };
 }
 
+/* A brand from its logo alone (SVG or PNG): the engine reads its colours
+   (by area for a PNG, by how much the markup uses each for an SVG). A logo
+   says nothing about fonts or control shapes, so the studio's default style
+   is suggested. */
+export async function analyseLogo(bytes: Uint8Array): Promise<BrandAnalysis> {
+  const found = await analyseImage(bytes, { inflate });
+  const colours: BrandColour[] = found.candidates.map((c: any) => ({ hex: c.hex.toLowerCase(), share: c.share, oklch: c.oklch, sources: [{ kind: "logo", label: "logo" }] }));
+  return {
+    colours,
+    monochrome: colours.length === 0,
+    page: { appearance: "light", background: "#ffffff", text: null },
+    fonts: { body: "", heading: null, loaded: [] },
+    style: { buttonRadius: null, pill: false, designSystem: "databricks", reason: "A logo says nothing about control shapes, so the studio's default style is suggested; try the others." },
+    warnings: [...found.warnings, ...(colours.length ? [] : ["The logo has no brand colour (only black, white and greys); the options use a suggested colour."])],
+  };
+}
+
 /* One entry per kind of evidence: many custom properties of one colour read as one ("CSS --a, --b and 4 more"). */
 function collapse(sources: Source[]): Source[] {
   const out: Source[] = [];
