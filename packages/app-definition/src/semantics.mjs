@@ -115,12 +115,12 @@ export function uxSemantics(value, context) {
     if (!screenIds.has(nav.screen)) return add("UX_SCREEN_UNKNOWN", `${at}/screen`, `Screen ${nav.screen} does not exist`);
     reached.add(nav.screen);
     const target = idx.screens.get(nav.screen);
-    if (target?.param && !nav.param) add("UX_PARAM_MISSING", at, `Screen ${nav.screen} needs its ${target.param.id} parameter`, "error", "nav.params");
+    if (target?.param && !nav.param) add("UX_PARAM_MISSING", at, `Screen ${nav.screen} needs its ${target.param.id} parameter`, "error", "flow.target-exists");
     exprDiagnostics(nav.param, `${at}/param`, add);
     if (from && target) {
       const lost = screenRoles(from).filter((r) => !screenRoles(target).includes(r));
       if (lost.length && list(from.roles).length === 0 && list(target.roles).length) {
-        add("UX_DEAD_END", at, `Roles ${lost.join(", ")} can see ${from.id} but not ${target.id}; hide the link for them or widen ${target.id}`, "warning", "nav.no-dead-ends");
+        add("UX_DEAD_END", at, `Roles ${lost.join(", ")} can see ${from.id} but not ${target.id}; hide the link for them or widen ${target.id}`, "warning", "flow.no-dead-end");
       }
     }
   };
@@ -160,16 +160,16 @@ export function uxSemantics(value, context) {
       bound.add(c.parameter);
     });
     for (const prm of params.values()) {
-      if (prm.required && !bound.has(prm.id) && prm.kind === "entity") add("UX_PARAM_UNBOUND", at, `Required parameter ${prm.id} of ${a.id} is neither bound nor an input`, "error", "action.inputs");
+      if (prm.required && !bound.has(prm.id) && prm.kind === "entity") add("UX_PARAM_UNBOUND", at, `Required parameter ${prm.id} of ${a.id} is neither bound nor an input`);
     }
     const destructive = p.emphasis === "destructive" || list(a.binding?.effects).some((e) => e.kind === "delete");
-    if (destructive && !p.confirm) add("UX_CONFIRM_MISSING", at, `${a.name ?? a.id} deletes or cannot be undone; ask for confirmation`, "error", "action.confirm-destructive");
+    if (destructive && !p.confirm) add("UX_CONFIRM_MISSING", at, `${a.name ?? a.id} deletes or cannot be undone; ask for confirmation`, "error", "action.destructive-safeguard");
     // Role consistency: a placement shown to roles the action does not authorize.
     const authz = a.authorization?.kind === "roles" ? list(a.authorization.roles) : null;
     if (authz) {
       const shownTo = list(p.roles).length ? list(p.roles) : screenRoles(screen);
       const blocked = shownTo.filter((r) => !authz.includes(r));
-      if (blocked.length) add("UX_ROLE_ACTION", at, `${a.name ?? a.id} is shown to ${blocked.join(", ")}, who may not run it; restrict the placement's roles to ${authz.join(", ")}`, "error", "action.only-what-you-may-do");
+      if (blocked.length) add("UX_ROLE_ACTION", at, `${a.name ?? a.id} is shown to ${blocked.join(", ")}, who may not run it; restrict the placement's roles to ${authz.join(", ")}`);
     }
     checkNavigate(p.success?.navigate, `${at}/success/navigate`, screen);
   };
@@ -181,7 +181,7 @@ export function uxSemantics(value, context) {
     else {
       reached.add(n.screen);
       const s = idx.screens.get(n.screen);
-      if (s?.param) add("UX_NAV_PARAM", `${at}/screen`, `${n.screen} needs a parameter, so it cannot be a navigation destination`, "error", "nav.destinations");
+      if (s?.param) add("UX_NAV_PARAM", `${at}/screen`, `${n.screen} needs a parameter, so it cannot be a navigation destination`, "error", "flow.target-exists");
     }
     roleList(n.roles, `${at}/roles`);
   });
@@ -192,7 +192,7 @@ export function uxSemantics(value, context) {
   });
   for (const r of roleIds) {
     const navFor = list(value.shell?.navigation).filter((n) => !list(n.roles).length || list(n.roles).includes(r));
-    if (!navFor.length) add("UX_ROLE_NO_NAV", "/shell/navigation", `Role ${r} has no navigation destination`, "error", "nav.every-role");
+    if (!navFor.length) add("UX_ROLE_NO_NAV", "/shell/navigation", `Role ${r} has no navigation destination`);
   }
 
   screens.forEach((s, i) => {
@@ -226,7 +226,7 @@ export function uxSemantics(value, context) {
       list(r.eventActions).forEach((p, k) => checkPlacement(p, `${rat}/eventActions/${k}`, s, rowRecord));
       list(r.items).forEach((p, k) => checkPlacement(p, `${rat}/items/${k}`, s, s.param?.record));
       if (r.rowLink) checkNavigate(r.rowLink, `${rat}/rowLink`, s);
-      if (["collection", "related", "schedule"].includes(r.kind) && !r.empty) add("UX_EMPTY_STATE", rat, `${r.kind} region ${r.id} has no empty state; say what appears here and how to add it`, "error", "feedback.empty-states");
+      if (["collection", "related", "schedule"].includes(r.kind) && !r.empty) add("UX_EMPTY_STATE", rat, `${r.kind} region ${r.id} has no empty state; say what appears here and how to add it`, "error", "screen.states");
       if (r.kind === "collection" && !list(r.columns).length) add("UX_COLUMNS", rat, `Collection region ${r.id} has no columns`);
       if (r.kind === "schedule") {
         for (const k of ["start", "end"]) {

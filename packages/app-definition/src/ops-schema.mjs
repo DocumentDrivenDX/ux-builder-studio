@@ -30,8 +30,8 @@ export const OPERATION_SCHEMAS = {
     args: { type: "object", properties: { name: str("App name."), description: str("One sentence on what it does."), useCase: str("The requester's use case, in their words."), version: str("Semantic version."), template: { enum: ["tracker", "directory", "assistant", "request", "planner", "custom"] }, tags: { type: "array", items: { type: "string" } }, visibility: { enum: ["private", "shared", "catalog"] } }, additionalProperties: false },
   },
   setLook: {
-    description: "Choose the app's theme (a @ux-builder/tokens theme name such as plain, synaptiq, databricks, praxis, praxis-material, praxis-fluentui, praxis-carbon) and default appearance.",
-    args: { type: "object", properties: { theme: str("Theme name."), appearance: { enum: ["system", "light", "dark"] }, designSystem: { enum: ["databricks", "material", "fluent", "carbon", "own"] }, brandKit: str("Studio brand kit id, if the theme came from one.") }, additionalProperties: false },
+    description: "Choose the app's look: a @ux-builder/tokens theme (plain, synaptiq, databricks, praxis, praxis-material, praxis-fluentui, praxis-carbon), or a studio brand kit (which then dresses the app; the theme stays as its fallback), and the default appearance.",
+    args: { type: "object", properties: { theme: str("Theme name."), appearance: { enum: ["system", "light", "dark"] }, designSystem: { enum: ["databricks", "material", "fluent", "carbon", "own"] }, brandKit: str("A studio brand kit's id: the app wears it. An empty string stops using one (the theme shows again).") }, additionalProperties: false },
   },
   setShell: { description: "App shell title and frame.", args: { type: "object", properties: { title: str("Shown in the top bar."), frame: { enum: ["side-nav", "top-nav", "top-bar"] } }, additionalProperties: false } },
   addRole: { description: "Add a role people can have (used by actions, screens, navigation and access).", args: { type: "object", required: ["id", "name"], properties: { id: id("Role id, e.g. employee."), name: str("Role name."), description: str("Who has it.") }, additionalProperties: false } },

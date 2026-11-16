@@ -7,6 +7,7 @@ import type { Identity } from "@ux-builder/app-runtime/contract";
 import { Select } from "../agent/generated/bound/ux-builder-ui";
 import { api, httpClient, onChange, type AppView as View } from "../api";
 import { useParams } from "../router";
+import { useKitTokens } from "../brand/brand";
 
 export function RunPage() {
   const { appId } = useParams();
@@ -21,6 +22,7 @@ export function RunPage() {
   const people: Identity[] = view?.definition.extensions?.["umf.app"]?.samples?.identities ?? [];
   const person = people.find((p) => p.id === personId) ?? people[0];
   const client = useMemo(() => (person ? httpClient(appId, person) : null), [appId, person]);
+  const kitTokens = useKitTokens(view?.definition.extensions?.["umf.ux"]?.look?.brandKit);
   if (error) return <Page><Notice tone="error" title="Could not open this app">{error}</Notice></Page>;
   if (!view || !client) return <Page><p className="studio-meta">Opening…</p></Page>;
   return (
@@ -28,7 +30,7 @@ export function RunPage() {
       <div className="run__bar">
         <Select label="Signed in as (sample person)" value={person?.id} options={people.map((p) => ({ value: p.id, label: `${p.name} (${p.roles.join(", ")})` }))} onChange={(e: any) => setPersonId(e.target.value)} agent={{ id: "run.person", description: "Which sample person the app is signed in as" }} />
       </div>
-      <AppView key={`${view.version}:${person?.id}`} definition={view.definition} client={client} data-non-agent="the app is operated by its own people here; the studio's agent works in the builder" />
+      <AppView key={`${view.version}:${person?.id}`} definition={view.definition} client={client} tokens={kitTokens} data-non-agent="the app is operated by its own people here; the studio's agent works in the builder" />
     </div>
   );
 }

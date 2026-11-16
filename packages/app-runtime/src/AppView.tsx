@@ -27,6 +27,8 @@ export interface AppViewProps {
   appearance?: "light" | "dark" | "system";
   /** Overrides the definition's theme. */
   theme?: string;
+  /** A brand's resolved tokens (--piq-* names without the dashes) for each appearance, as a studio brand kit gives them. Given, they dress the app in place of the theme. */
+  tokens?: { light: Record<string, string>; dark: Record<string, string> } | null;
   /** "window" (default) adapts to the window; "container" to the element (its parent then needs a height). */
   adapt?: "window" | "container";
   /** Hosts may pass attributes the view does not use (data-*, …); they are ignored. */
@@ -36,11 +38,29 @@ export interface AppViewProps {
 const EMPTY_SNAPSHOT = (now: string): Snapshot => ({ records: {}, now, revision: -1 });
 const KNOWN_ICONS = new Set<string>(ICON_NAMES as string[]);
 
+const DARK = "(prefers-color-scheme: dark)";
+function useSystemDark() {
+  const [dark, setDark] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.(DARK).matches);
+  useEffect(() => {
+    const mq = typeof window !== "undefined" ? window.matchMedia?.(DARK) : null;
+    if (!mq) return undefined;
+    const update = () => setDark(mq.matches);
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return dark;
+}
+
 export function AppView(props: AppViewProps) {
   const ux = (props.definition?.extensions?.["umf.ux"] ?? {}) as UxExtension;
+  const preference = props.appearance ?? ux.look?.appearance ?? "system";
+  const systemDark = useSystemDark();
+  // A brand kit's tokens: the ones for the appearance shown.
+  const shown = preference === "system" ? (systemDark ? "dark" : "light") : preference;
+  const tokens = props.tokens ? props.tokens[shown] ?? props.tokens.light : undefined;
   return (
-    <ThemeProvider theme={props.theme ?? ux.look?.theme ?? "plain"} appearance={props.appearance ?? ux.look?.appearance ?? "system"} favicon={false}
-      className="app-rt" data-adapt={props.adapt ?? "window"}>
+    <ThemeProvider theme={tokens ? undefined : props.theme ?? ux.look?.theme ?? "plain"} tokens={tokens} appearance={preference} favicon={false}
+      className="app-rt" data-adapt={props.adapt ?? "window"} data-brand-kit={tokens ? ux.look?.brandKit ?? "custom" : undefined}>
       <ToastProvider>
         <AppFrame {...props} />
       </ToastProvider>

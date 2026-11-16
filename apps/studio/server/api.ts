@@ -9,6 +9,7 @@ import { AppError, applyOperations, createAppRecord, createVariant, emitChange, 
 import { appStore, describeDatabase } from "./db.js";
 import { compileDeployment, loadUmf } from "./umf.js";
 import { schemaFor } from "./db.js";
+import { mountBrand } from "./brand/routes.js";
 
 type AgentRoutes = { mount(app: express.Express): void } | null;
 
@@ -98,6 +99,7 @@ export function createApi({ agent }: { agent: AgentRoutes }) {
     req.on("close", () => { off(); clearInterval(ping); });
   });
 
+  mountBrand(app);
   agent?.mount(app);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

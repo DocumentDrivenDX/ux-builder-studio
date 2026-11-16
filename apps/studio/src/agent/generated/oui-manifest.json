@@ -1,8 +1,185 @@
 {
-  "buildId": "7ded51f7adae3544",
+  "buildId": "bf5b35a3af5173b1",
   "surfaces": [
     {
       "actions": [
+        {
+          "control": "button",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Press \"Get brand\": Read the website's brand: screenshot, colours, fonts and style, then show three palette options.",
+          "id": "brand.capture",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "brand_capture",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Get brand"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Choose \"Style (design system)\": The design system the options are shown on: control shapes, density and fonts (Databricks, Material, Fluent or Carbon) It is in the Card.",
+          "id": "brand.design-system",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "brand_design_system",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            },
+            {
+              "kind": "panel",
+              "openedBy": [],
+              "title": "Card"
+            }
+          ],
+          "source": "control",
+          "title": "Style (design system)"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Type into \"Kit name\": The name the chosen option is kept under in the brand kit library. It is in the Card.",
+          "id": "brand.kit-name",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "brand_kit_name",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            },
+            {
+              "kind": "panel",
+              "openedBy": [],
+              "title": "Card"
+            }
+          ],
+          "source": "control",
+          "title": "Kit name"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Choose \"Show in\": Whether the options are shown in light or dark. It is in the Card.",
+          "id": "brand.preview-appearance",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose: light = Light; dark = Dark",
+                "enum": [
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "brand_preview_appearance",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            },
+            {
+              "kind": "panel",
+              "openedBy": [],
+              "title": "Card"
+            }
+          ],
+          "source": "control",
+          "title": "Show in"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Press \"Use the theme instead\": Stop using the brand kit; the app shows its theme again.",
+          "id": "brand.stop-kit",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "brand_stop_kit",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Use the theme instead"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/panels/BrandPanel.tsx",
+          "description": "Type into \"Website\": The website whose brand to read, such as the organisation's home page. Its placeholder, an example of what goes in it: \"www.example.com\".",
+          "id": "brand.url",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "brand_url",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Website"
+        },
         {
           "control": "tabs",
           "declaredIn": "src/pages/AppPage.tsx",
@@ -219,7 +396,7 @@
         {
           "control": "choice",
           "declaredIn": "src/pages/AppPage.tsx",
-          "description": "Choose \"Theme\": The app's theme (brand and design system)",
+          "description": "Choose \"Theme\": The app's built-in theme (brand and design system), when it uses no brand kit.",
           "id": "look.theme",
           "input": {
             "additionalProperties": false,
@@ -401,7 +578,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), variant.name (Name), variant.note (What differs), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
+          "description": "What the page shows now. values: variant.name (Name), variant.note (What differs), preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), brand.design-system (Style (design system)), brand.preview-appearance (Show in), brand.kit-name (Kit name), brand.url (Website), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
           "id": "state",
           "schema": {
             "properties": {
@@ -798,6 +975,34 @@
     {
       "actions": [
         {
+          "description": "Use a brand kit: Dresses the app in a brand kit already in the studio's library (see the brand observation's kits). (A kit's Use button in the Brand and style panel's library)",
+          "effect": "edit",
+          "id": "app/action/apply-brand-kit",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "kit": {
+                "description": "A kit id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kit"
+            ],
+            "type": "object"
+          },
+          "name": "app_apply_brand_kit",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "A kit's Use button in the Brand and style panel's library"
+            }
+          ],
+          "source": "room-action",
+          "title": "Use a brand kit"
+        },
+        {
           "description": "Apply changes: Applies a batch of operations to the app's definition, in order, and saves one new version if UMF validates the result. A refused batch saves nothing and returns the problems to fix. (The builder's edit panels (data, screens, actions, look))",
           "effect": "edit",
           "id": "app/action/apply-operations",
@@ -869,6 +1074,67 @@
           ],
           "source": "room-action",
           "title": "Apply changes"
+        },
+        {
+          "description": "Get brand from a website: Reads a website's brand on this computer (a screenshot, its CSS colours, fonts, button style and logo), shows it in the Brand and style panel, and makes three palette options that meet ux-builder's colour rules, on the design system the site's style suggests. Takes a few seconds. Returns the colours found, the design system and the option ids; nothing about the app changes until an option is chosen. (The Brand and style panel's Website field and Get brand button)",
+          "effect": "edit",
+          "id": "app/action/capture-brand",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "description": "The website, such as www.example.com",
+                "minLength": 3,
+                "type": "string"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "type": "object"
+          },
+          "name": "app_capture_brand",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The Brand and style panel's Website field and Get brand button"
+            }
+          ],
+          "source": "room-action",
+          "title": "Get brand from a website"
+        },
+        {
+          "description": "Use a brand option: Keeps one of the captured brand's options as a brand kit in the studio's library (under the name given, else the site's name) and dresses the app in it. Choose for the person only when they ask you to. (An option's Use this option button in the Brand and style panel)",
+          "effect": "edit",
+          "id": "app/action/choose-brand-option",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "description": "The kit's name",
+                "type": "string"
+              },
+              "option": {
+                "description": "An option id from the brand observation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "option"
+            ],
+            "type": "object"
+          },
+          "name": "app_choose_brand_option",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "An option's Use this option button in the Brand and style panel"
+            }
+          ],
+          "source": "room-action",
+          "title": "Use a brand option"
         },
         {
           "description": "Create variant: Copies this app into a new catalog entry that records it as a variant of this one, and opens it. (The Create variant button)",
@@ -953,6 +1219,39 @@
           "title": "Restore version"
         },
         {
+          "description": "Show brand options on a design system: Shows the captured brand's three options on another design system (control shapes, density and fonts). Needs a brand captured first. (The Brand and style panel's Style (design system) picker)",
+          "effect": "edit",
+          "id": "app/action/set-brand-design-system",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "designSystem": {
+                "enum": [
+                  "databricks",
+                  "material",
+                  "fluent",
+                  "carbon"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "designSystem"
+            ],
+            "type": "object"
+          },
+          "name": "app_set_brand_design_system",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The Brand and style panel's Style (design system) picker"
+            }
+          ],
+          "source": "room-action",
+          "title": "Show brand options on a design system"
+        },
+        {
           "description": "Set preview: Shows the App preview tab, and optionally signs the live preview in as one of the app's sample people, opens one of its screens (with its parameter, a row key), or switches light/dark. With no input it only shows the preview; do so after changing the app, so the person sees the result. (The App preview tab and its toolbar: Signed in as, screen and appearance)",
           "effect": "edit",
           "id": "app/action/set-preview",
@@ -1003,6 +1302,7 @@
               "panel": {
                 "enum": [
                   "overview",
+                  "brand",
                   "data",
                   "screens",
                   "actions",
@@ -1029,6 +1329,26 @@
           ],
           "source": "room-action",
           "title": "Show panel"
+        },
+        {
+          "description": "Stop using the brand kit: The app stops wearing its brand kit and shows its built-in theme again. The kit stays in the library. (The Brand and style panel's Use the theme instead button)",
+          "effect": "edit",
+          "id": "app/action/stop-brand-kit",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "app_stop_brand_kit",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The Brand and style panel's Use the theme instead button"
+            }
+          ],
+          "source": "room-action",
+          "title": "Stop using the brand kit"
         }
       ],
       "description": "The app open in the builder: its definition (data, roles, actions, screens, navigation, sample data), its validation, and its live preview.",
@@ -1109,6 +1429,31 @@
                   "configuration",
                   "preview"
                 ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "The app's look and the brand step: the theme or brand kit it wears, the website brand captured (colours and where each was seen, fonts, the suggested design system, the three options with what each does and any colour rules to review), and the kits in the library",
+          "id": "brand",
+          "schema": {
+            "properties": {
+              "busy": {
+                "type": "string"
+              },
+              "capture": {
+                "description": "The capture as JSON, or empty",
+                "type": "string"
+              },
+              "kits": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "look": {
                 "type": "string"
               }
             },

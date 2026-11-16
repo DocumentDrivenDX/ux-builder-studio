@@ -4,7 +4,7 @@
    signed in as one of its sample people. */
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Dialog, Notice, StatusPill, registerIcons } from "@ux-builder/ui";
-import { iconDatabase, iconHistory, iconInfo, iconListChecks, iconNetwork, iconPanelsTopLeft, iconServer, iconZap } from "@ux-builder/ui/icons";
+import { iconDatabase, iconHistory, iconInfo, iconListChecks, iconNetwork, iconPalette, iconPanelsTopLeft, iconServer, iconZap } from "@ux-builder/ui/icons";
 import { Cluster, ConfirmDialog, Page, PageHeader, PrimaryNav, Stack } from "@ux-builder/ui/patterns";
 import { AppView } from "@ux-builder/app-runtime";
 import { Button, ChoicePicker, Select, Tabs, TextField } from "../agent/generated/bound/ux-builder-ui";
@@ -13,20 +13,24 @@ import { useParams } from "../router";
 import { AppRoom } from "../rooms/app/AppRoom";
 import { ActionsPanel, DataPanel, DeploymentPanel, OverviewPanel, RulesPanel, ScreensPanel, VersionsPanel } from "../panels/Panels";
 import { DiagramsPanel } from "../panels/DiagramsPanel";
+import { BrandPanel } from "../panels/BrandPanel";
+import { BrandProvider, useBrand, useKitTokens } from "../brand/brand";
 import { BUILDER_TABS, PANELS, StudioProvider, useStudio, type BuilderTab, type Panel } from "../studio";
 
 export function AppPage() {
   const { appId } = useParams();
   return (
     <StudioProvider appId={appId}>
-      <AppRoom />
-      <Builder />
+      <BrandProvider>
+        <AppRoom />
+        <Builder />
+      </BrandProvider>
     </StudioProvider>
   );
 }
 
-registerIcons(iconInfo, iconDatabase, iconPanelsTopLeft, iconZap, iconNetwork, iconListChecks, iconHistory, iconServer);
-const PANEL_ICONS: Record<Panel, string> = { overview: "info", data: "database", screens: "panels-top-left", actions: "zap", diagrams: "network", rules: "list-checks", versions: "history", deployment: "server" };
+registerIcons(iconInfo, iconPalette, iconDatabase, iconPanelsTopLeft, iconZap, iconNetwork, iconListChecks, iconHistory, iconServer);
+const PANEL_ICONS: Record<Panel, string> = { overview: "info", brand: "palette", data: "database", screens: "panels-top-left", actions: "zap", diagrams: "network", rules: "list-checks", versions: "history", deployment: "server" };
 
 const APPEARANCES = [
   { value: "system", label: "Auto" },
@@ -36,6 +40,7 @@ const APPEARANCES = [
 
 function Builder() {
   const s = useStudio();
+  const brand = useBrand();
   const [themes, setThemes] = useState<Array<{ value: string; label: string }>>([]);
   const [confirmReset, setConfirmReset] = useState(false);
   const [variantOpen, setVariantOpen] = useState(false);
@@ -48,6 +53,7 @@ function Builder() {
   }, []);
 
   const client = useMemo(() => (s.person ? httpClient(s.appId, s.person) : null), [s.appId, s.person?.id]);
+  const kitTokens = useKitTokens(s.view?.definition.extensions?.["umf.ux"]?.look?.brandKit);
 
   if (s.error) return <Page><Notice tone="error" title="Could not open this app">{s.error}</Notice></Page>;
   if (!s.view) return <Page><p className="studio-meta">Opening…</p></Page>;
@@ -65,6 +71,7 @@ function Builder() {
 
   const panels: Record<Panel, ReactElement> = {
     overview: <OverviewPanel />,
+    brand: <BrandPanel />,
     data: <DataPanel />,
     screens: <ScreensPanel />,
     actions: <ActionsPanel />,
@@ -106,13 +113,20 @@ function Builder() {
             onChange={(e: any) => s.setPerson(e.target.value)}
             agent={{ id: "preview.person", description: "Which sample person the live preview is signed in as" }}
           />
-          <Select
-            label="Theme"
-            value={look.theme}
-            options={themes.length ? themes : [{ value: look.theme, label: look.theme }]}
-            onChange={(e: any) => setLook({ theme: e.target.value }, `Theme ${e.target.value}`)}
-            agent={{ id: "look.theme", description: "The app's theme (brand and design system)" }}
-          />
+          {look.brandKit ? (
+            <p className="studio-meta builder__kit">
+              {`Brand kit: ${brand.current?.name ?? look.brandKit}`}{" "}
+              <a className="studio-link" href="?panel=brand" onClick={(e) => { e.preventDefault(); s.setPanel("brand"); }} data-non-agent="the Brand and style panel is the app room's show-panel action">Change</a>
+            </p>
+          ) : (
+            <Select
+              label="Theme"
+              value={look.theme}
+              options={themes.length ? themes : [{ value: look.theme, label: look.theme }]}
+              onChange={(e: any) => setLook({ theme: e.target.value }, `Theme ${e.target.value}`)}
+              agent={{ id: "look.theme", description: "The app's built-in theme (brand and design system), when it uses no brand kit" }}
+            />
+          )}
           <ChoicePicker
             label="Appearance"
             value={look.appearance ?? "system"}
@@ -128,7 +142,7 @@ function Builder() {
         {!s.view.verdict.renderable ? (
           <Notice tone="error" title="This version cannot render">Open App configuration, then Rules, to see what to fix.</Notice>
         ) : client ? (
-          <AppView key={`${def.id}:${s.view.version}:${s.person?.id}`} definition={def} client={client} location={s.location} onLocationChange={s.setLocation} adapt="container" data-non-agent="the preview is the app itself; the agent drives it through the app room's set-preview action" />
+          <AppView key={`${def.id}:${s.view.version}:${s.person?.id}`} definition={def} client={client} tokens={kitTokens} location={s.location} onLocationChange={s.setLocation} adapt="container" data-non-agent="the preview is the app itself; the agent drives it through the app room's set-preview action" />
         ) : (
           <Notice tone="info" title="Add sample people to preview the app">The preview signs in as one of the app's sample people.</Notice>
         )}

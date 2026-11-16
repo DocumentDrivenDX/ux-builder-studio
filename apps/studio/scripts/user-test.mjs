@@ -13,7 +13,8 @@
 
 import { spawn } from "node:child_process";
 import { createConnection } from "node:net";
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { createServer } from "node:http";
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -23,7 +24,7 @@ const studio = join(here, "..");
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 16);
-const OUT = opt("--out") ?? join(studio, "..", "..", "..", "..", "_scratch", "studio-user-test", stamp);
+const OUT = opt("--out") ?? join(studio, "..", "..", "_scratch", "studio-user-test", stamp);
 const SHOTS = join(OUT, "screenshots");
 mkdirSync(SHOTS, { recursive: true });
 /* Without --reuse the studio under test runs on its own ports (and its own Redis),
@@ -36,9 +37,7 @@ const WEB = `http://localhost:${PORTS.web}`;
 const API = `http://127.0.0.1:${PORTS.api}`;
 
 const require = createRequire(import.meta.url);
-let playwright;
-try { playwright = require("playwright"); } catch { playwright = await import("/Users/wesreid/Dev/Synaptiq/repos/ux-builder/node_modules/playwright/index.mjs"); }
-const { chromium } = playwright;
+const { chromium } = require("playwright");
 
 const listening = (port) => new Promise((r) => { const s = createConnection({ port, host: "127.0.0.1" }); s.once("connect", () => { s.end(); r(true); }); s.once("error", () => r(false)); });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -71,6 +70,15 @@ const session = await fetch(`${API}/api/agent/session`).then((r) => r.json()).ca
    outcomes (valid, complete, usable by every person), not time-tracker-2's numbers. */
 const LIVE = !!session && session.model !== "scripted";
 let finalReply = "";
+
+/* A made-up firm's website (fixtures/sites), served here, for the brand step. */
+const sites = createServer((req, res) => {
+  try { res.setHeader("content-type", "text/html"); res.end(readFileSync(join(studio, "fixtures", "sites", String(req.url).split("/")[1], "index.html"))); }
+  catch { res.statusCode = 404; res.end(); }
+});
+await new Promise((r) => sites.listen(0, "127.0.0.1", r));
+const SITE = `http://127.0.0.1:${sites.address().port}/evergreen/`;
+process.on("exit", () => sites.close());
 
 /* ---------- the test ---------- */
 const results = [];
@@ -401,6 +409,40 @@ await step("Change the look: another theme, and dark", async ({ check, shot }) =
   await wait(3000);
 });
 
+await step("Bring in the firm's brand from its website: three options, one chosen", async ({ check, shot }) => {
+  await panelTab("Brand and style");
+  await panels().getByLabel("Website", { exact: true }).fill(SITE);
+  await panels().getByRole("button", { name: "Get brand" }).click();
+  const options = panels().locator(".studio-brand__option");
+  await options.nth(2).waitFor({ timeout: 90000 });
+  check((await options.count()) === 3, "three palette options are offered");
+  check(await panels().getByRole("img", { name: /^Screenshot of Evergreen Legal/ }).isVisible(), "the site's screenshot is shown");
+  const found = await panels().locator(".studio-brand__colours").innerText();
+  check(found.includes("#0b6e4f") && /buttons/.test(found) && /theme colour/.test(found), "the brand green is found, with where it was seen");
+  check((await panels().getByLabel("Style (design system)").inputValue()) === "material", "pill-shaped buttons suggest Material");
+  check((await panels().getByText("Meets the colour rules").count()) >= 1, "at least one option meets every colour rule");
+  await shot("brand-options");
+  await panels().getByRole("radio", { name: "Dark" }).click();
+  await wait(500);
+  check((await panels().locator('[data-appearance-shown="dark"]').count()) === 3, "the options can be tried in dark");
+  await shot("brand-options-dark");
+  await panels().getByRole("radio", { name: "Light" }).click();
+  const second = options.nth(1);
+  const buttons = (await second.locator(".studio-swatch").first().locator("code").innerText()).trim();
+  await second.getByRole("button", { name: "Use this option" }).click();
+  await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
+  check((await panels().locator(".studio-brand__kits").innerText()).includes("Evergreen Legal"), "the choice is kept as a brand kit in the library");
+  await shot("brand-kit-chosen");
+  await showTab("App preview");
+  const app = preview.locator(".app-rt").first();
+  for (let i = 0; i < 40 && !(await app.getAttribute("data-brand-kit")); i++) await wait(500);
+  check((await app.getAttribute("data-brand-kit")) === "evergreen-legal", "the preview wears the kit");
+  const structure = await app.evaluate((el) => getComputedStyle(el).getPropertyValue("--piq-color-structure").trim().toLowerCase());
+  check(structure === buttons, `the app's primary buttons use the option's colour (${structure})`);
+  await settle();
+  await shot("brand-preview");
+});
+
 await step("Create a variant for the catalog", async ({ check, shot }) => {
   await page.getByRole("button", { name: "Create variant", exact: true }).click();
   const dlg = page.getByRole("dialog").last();
@@ -422,6 +464,7 @@ await step("Open the app on its own, as its people use it", async ({ check, shot
   await page.goto(`${WEB}/run/${encodeURIComponent(appId)}`, { waitUntil: "networkidle" });
   await wait(3000);
   check((await page.innerText("body")).includes("Unbilled this week"), "the app runs full page");
+  check((await page.locator(".app-rt").first().getAttribute("data-brand-kit")) === "evergreen-legal", "in its brand kit");
   await shot("app-standalone");
   await page.setViewportSize({ width: 390, height: 844 });
   await wait(2500);

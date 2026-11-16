@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- A made-up firm's website, for the brand capture tests: a green brand,
+     pill-shaped buttons, Roboto, a theme colour and brand custom properties. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Evergreen Legal | Matters, managed</title>
+  <meta name="theme-color" content="#0b6e4f">
+  <meta property="og:site_name" content="Evergreen Legal">
+  <style>
+    :root { --brand-primary: #0b6e4f; --brand-secondary: #f2a541; --ink: #1b1f23; --paper: #ffffff; }
+    body { margin: 0; font-family: Roboto, Arial, sans-serif; color: var(--ink); background: var(--paper); }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 48px; border-bottom: 1px solid #e5e7eb; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--brand-primary); text-decoration: none; }
+    nav a { margin-left: 24px; color: var(--brand-primary); text-decoration: none; }
+    .hero { padding: 96px 48px; background: #f4faf7; }
+    h1 { font-size: 48px; margin: 0 0 16px; color: var(--ink); }
+    p { font-size: 18px; max-width: 40rem; }
+    .btn { display: inline-block; padding: 14px 28px; border-radius: 999px; background: var(--brand-primary); color: #fff; text-decoration: none; font-weight: 600; margin-right: 12px; }
+    .btn--outline { background: transparent; color: var(--brand-primary); border: 2px solid var(--brand-primary); }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 48px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; }
+    .card a { color: var(--brand-primary); }
+    .tag { display: inline-block; background: var(--brand-secondary); color: var(--ink); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="/" aria-label="Evergreen Legal home">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#0b6e4f"/><path d="M20 8 L30 28 H10 Z" fill="#f2a541"/></svg>
+      Evergreen Legal
+    </a>
+    <nav><a href="#practice">Practice areas</a><a href="#people">People</a><a href="#insights">Insights</a><a href="#contact">Contact</a></nav>
+  </header>
+  <section class="hero">
+    <span class="tag">New</span>
+    <h1>Matters, managed.</h1>
+    <p>Evergreen keeps every matter, deadline and hour in one place, so your team spends its time on the work.</p>
+    <a class="btn" href="#start">Book a consultation</a><a class="btn btn--outline" href="#more">See how it works</a>
+  </section>
+  <section class="cards">
+    <div class="card"><h2>Litigation</h2><p>From intake to verdict. <a href="#lit">Read more</a></p></div>
+    <div class="card"><h2>Corporate</h2><p>Deals that close on time. <a href="#corp">Read more</a></p></div>
+    <div class="card"><h2>Employment</h2><p>Advice before it is a dispute. <a href="#emp">Read more</a></p></div>
+  </section>
+</body>
+</html>

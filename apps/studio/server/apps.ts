@@ -11,9 +11,21 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { apply, createApp, makeVariant, OpError, OPERATION_SCHEMAS, putScreen, setNavigation, summarize } from "@ux-builder/app-definition";
 import Ajv from "ajv";
+import manifest from "@ux-builder/tokens/manifest.json" with { type: "json" };
 import type { AppDefinition } from "@ux-builder/app-runtime/contract";
+import { kitExists } from "./brand/store.js";
 import { deployApp, schemaExists } from "./db.js";
 import { validateDefinition, type Verdict } from "./umf.js";
+
+/* An app's look must name a theme ux-builder ships and, if it uses one, a
+   brand kit in the studio's library; otherwise it would render unstyled. */
+const THEMES: string[] = (manifest as any).themes.map((t: any) => t.name);
+function checkLook(doc: AppDefinition, previous?: AppDefinition) {
+  const look = doc.extensions?.["umf.ux"]?.look ?? {};
+  if (previous && JSON.stringify(previous.extensions?.["umf.ux"]?.look ?? {}) === JSON.stringify(look)) return;
+  if (look.theme && !THEMES.includes(look.theme)) throw new AppError(422, "THEME_UNKNOWN", `There is no theme ${look.theme}; choose one of ${THEMES.join(", ")}; nothing was saved`);
+  if (look.brandKit && !kitExists(look.brandKit)) throw new AppError(422, "BRAND_KIT_UNKNOWN", `There is no brand kit ${look.brandKit} in the studio's library; nothing was saved`);
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(process.env.STUDIO_DATA_DIR ?? join(here, "..", ".data"), "apps");
@@ -84,7 +96,7 @@ export function listApps() {
       const doc = read<AppDefinition>(join(ROOT, d.name, "definition.json"));
       const history = read<VersionMeta[]>(join(ROOT, d.name, "history.json"));
       const app = doc.extensions?.["umf.app"] ?? {};
-      return { id: doc.id, name: app.name, description: app.description, useCase: app.useCase, version: app.version, revision: history.at(-1)?.version ?? 0, updatedAt: history.at(-1)?.at, variantOf: app.variantOf ?? null, visibility: app.visibility, theme: doc.extensions?.["umf.ux"]?.look?.theme };
+      return { id: doc.id, name: app.name, description: app.description, useCase: app.useCase, version: app.version, revision: history.at(-1)?.version ?? 0, updatedAt: history.at(-1)?.at, variantOf: app.variantOf ?? null, visibility: app.visibility, theme: doc.extensions?.["umf.ux"]?.look?.theme, brandKit: doc.extensions?.["umf.ux"]?.look?.brandKit ?? null };
     })
     .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }
@@ -117,6 +129,7 @@ export async function createAppRecord({ id, name, description, useCase, theme, d
   const appId = definition?.id ?? id ?? `app.${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   if (existsSync(join(dirOf(appId), "definition.json"))) throw new AppError(409, "APP_EXISTS", `An app ${appId} already exists`);
   const doc = definition ?? starterDefinition({ id: appId, name, description, useCase, theme });
+  checkLook(doc);
   return save(doc, { by, summary: definition ? `Imported ${name}` : `Created ${name}`, operations: [] });
 }
 
@@ -143,6 +156,7 @@ async function applyOperationsNow(id: string, operations: Operation[], { by = "p
     }
   }
   if (doc.id !== id) throw new AppError(422, "APP_ID_CHANGED", "Operations may not change an app's id; create a variant instead");
+  checkLook(doc, current.definition);
   return save(doc, { by, summary: summary ?? operations.map((o) => o.op).join(", "), operations }, { previous: current.definition });
 }
 

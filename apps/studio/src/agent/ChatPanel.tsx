@@ -133,6 +133,7 @@ const START_NEW = [
   { label: "What can the studio build?", prompt: "What kinds of apps can the studio build, and what do you need from me to start one?" },
 ];
 const START_OPEN = [
+  { label: "Bring in our brand", prompt: "Dress this app in our organisation's brand. Ask me for our website, read its brand, and walk me through the options." },
   { label: "Add a feature", prompt: "I'd like to add a feature to this app. Ask me what it should do, then suggest how it fits the app's data, screens and roles." },
   { label: "Explain this app", prompt: "Explain how this app works: its people and roles, its data, and what each screen is for." },
   { label: "Check it for problems", prompt: "Check this app for problems (validation warnings, missing screens or actions, gaps for any role) and suggest fixes." },

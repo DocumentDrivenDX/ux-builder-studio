@@ -6,6 +6,8 @@
       applied once (a patch already applied is skipped).
    2. ux-builder's tokens and widgets are built (the studio uses their dist/).
    3. UMF's SDK is fetched from its GitHub release (checksum-verified).
+   4. Playwright's Chromium is installed: the studio reads a website's brand
+      with it, and the user test drives the studio with it.
 
    Safe to run again: it only does what is missing, except the builds, which
    are quick. */
@@ -41,4 +43,8 @@ run("npm", ["run", "build", "--workspace", "@ux-builder/tokens"]);
 run("npm", ["run", "build", "--workspace", "@ux-builder/ui"]);
 
 run("npm", ["run", "setup", "--workspace", "@ux-builder/studio"]);
+
+// The browser the studio reads websites with (brand from a URL) and its user test drives.
+console.log("Installing the studio's browser (Chromium, for brand capture)…");
+run("npx", ["playwright", "install", "chromium"]);
 console.log("Ready: npm run dev");

@@ -12,6 +12,11 @@ export interface AppCtx {
   createVariant(input: { name: string; note?: string }): Promise<RoomResult>;
   restoreVersion(input: { version: number }): Promise<RoomResult>;
   resetData(): Promise<RoomResult>;
+  captureBrand(input: { url: string }): Promise<RoomResult>;
+  setBrandDesignSystem(input: { designSystem: string }): Promise<RoomResult>;
+  chooseBrandOption(input: { option: string; name?: string }): Promise<RoomResult>;
+  applyBrandKit(input: { kit: string }): Promise<RoomResult>;
+  stopBrandKit(): Promise<RoomResult>;
 }
 
 export const appRoom: RoomCatalog<AppCtx> = {
@@ -54,7 +59,7 @@ export const appRoom: RoomCatalog<AppCtx> = {
       title: "Show panel",
       description: "Shows the App configuration tab with one of its panels.",
       control: "The App configuration tab and its panel tabs",
-      input: { type: "object", properties: { panel: { type: "string", enum: ["overview", "data", "screens", "actions", "diagrams", "rules", "versions", "deployment"] } }, required: ["panel"], additionalProperties: false },
+      input: { type: "object", properties: { panel: { type: "string", enum: ["overview", "brand", "data", "screens", "actions", "diagrams", "rules", "versions", "deployment"] } }, required: ["panel"], additionalProperties: false },
       effect: "edit",
       run: (ctx, input) => ctx.showPanel(input as never),
     },
@@ -90,6 +95,56 @@ export const appRoom: RoomCatalog<AppCtx> = {
       destructive: true,
       run: (ctx) => ctx.resetData(),
     },
+    {
+      kind: "action",
+      id: "capture-brand",
+      title: "Get brand from a website",
+      description: "Reads a website's brand on this computer (a screenshot, its CSS colours, fonts, button style and logo), shows it in the Brand and style panel, and makes three palette options that meet ux-builder's colour rules, on the design system the site's style suggests. Takes a few seconds. Returns the colours found, the design system and the option ids; nothing about the app changes until an option is chosen.",
+      control: "The Brand and style panel's Website field and Get brand button",
+      input: { type: "object", properties: { url: { type: "string", minLength: 3, description: "The website, such as www.example.com" } }, required: ["url"], additionalProperties: false },
+      effect: "edit",
+      run: (ctx, input) => ctx.captureBrand(input as never),
+    },
+    {
+      kind: "action",
+      id: "set-brand-design-system",
+      title: "Show brand options on a design system",
+      description: "Shows the captured brand's three options on another design system (control shapes, density and fonts). Needs a brand captured first.",
+      control: "The Brand and style panel's Style (design system) picker",
+      input: { type: "object", properties: { designSystem: { type: "string", enum: ["databricks", "material", "fluent", "carbon"] } }, required: ["designSystem"], additionalProperties: false },
+      effect: "edit",
+      run: (ctx, input) => ctx.setBrandDesignSystem(input as never),
+    },
+    {
+      kind: "action",
+      id: "choose-brand-option",
+      title: "Use a brand option",
+      description: "Keeps one of the captured brand's options as a brand kit in the studio's library (under the name given, else the site's name) and dresses the app in it. Choose for the person only when they ask you to.",
+      control: "An option's Use this option button in the Brand and style panel",
+      input: { type: "object", properties: { option: { type: "string", description: "An option id from the brand observation" }, name: { type: "string", description: "The kit's name" } }, required: ["option"], additionalProperties: false },
+      effect: "edit",
+      run: (ctx, input) => ctx.chooseBrandOption(input as never),
+    },
+    {
+      kind: "action",
+      id: "apply-brand-kit",
+      title: "Use a brand kit",
+      description: "Dresses the app in a brand kit already in the studio's library (see the brand observation's kits).",
+      control: "A kit's Use button in the Brand and style panel's library",
+      input: { type: "object", properties: { kit: { type: "string", description: "A kit id" } }, required: ["kit"], additionalProperties: false },
+      effect: "edit",
+      run: (ctx, input) => ctx.applyBrandKit(input as never),
+    },
+    {
+      kind: "action",
+      id: "stop-brand-kit",
+      title: "Stop using the brand kit",
+      description: "The app stops wearing its brand kit and shows its built-in theme again. The kit stays in the library.",
+      control: "The Brand and style panel's Use the theme instead button",
+      input: { type: "object", properties: {}, additionalProperties: false },
+      effect: "edit",
+      run: (ctx) => ctx.stopBrandKit(),
+    },
   ],
   fields: [],
   commands: [],
@@ -108,6 +163,11 @@ export const appRoom: RoomCatalog<AppCtx> = {
       id: "preview",
       description: "The live preview: which builder tab is shown (configuration or preview), who the preview is signed in as, which screen it shows, and the people available",
       schema: { type: "object", properties: { tab: { type: "string", enum: ["configuration", "preview"] }, person: { type: "string" }, screen: { type: "string" }, people: { type: "array", items: { type: "string" } }, screens: { type: "array", items: { type: "string" } } } },
+    },
+    {
+      id: "brand",
+      description: "The app's look and the brand step: the theme or brand kit it wears, the website brand captured (colours and where each was seen, fonts, the suggested design system, the three options with what each does and any colour rules to review), and the kits in the library",
+      schema: { type: "object", properties: { look: { type: "string" }, busy: { type: "string" }, capture: { type: "string", description: "The capture as JSON, or empty" }, kits: { type: "array", items: { type: "string" } } } },
     },
   ],
 };

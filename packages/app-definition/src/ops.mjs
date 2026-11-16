@@ -116,6 +116,8 @@ export function setIdentity(doc, { name, description, useCase, version, template
 export function setLook(doc, look) {
   const d = clone(doc);
   ux(d).look = { ...ux(d).look, ...Object.fromEntries(Object.entries(look).filter(([, v]) => v != null)) };
+  // An empty brand kit stops using one; the theme shows again.
+  if (ux(d).look.brandKit === "") delete ux(d).look.brandKit;
   return d;
 }
 

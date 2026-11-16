@@ -41,6 +41,7 @@ real Postgres instead, run `docker compose up -d` and set `DATABASE_URL`.
 | `packages/app-definition` | The vocabularies (`vocabularies/`), their semantic validators, app profile 0.1, the `umf.app.expr` expression language, the engine (derived values, access, `umf.actions` execution), and the typed operations the agent builds with |
 | `packages/app-runtime` | The renderer, including the new `WeekSchedule` time grid |
 | `apps/studio/server` | UMF (validation, table deployment), Postgres, the app store with versions and variants, the API, and the agent (OUI realtime and worker, knowledge, scripted model) |
+| `apps/studio/server/brand` | Brand from a website: capture (Playwright: screenshot, CSS facts, logo), analysis (ux-builder's palette engine plus the CSS evidence), three options checked against ux-builder's colour rules, the brand kit library and its DTCG export |
 | `apps/studio/src` | The studio UI. OUI bindings come from `oui/ux-builder-ui.mapping.json`; rooms are in `src/rooms` |
 | `apps/studio/fixtures` | The time tracker: recorded build and sample data, generated from time-tracker-2's seed |
 

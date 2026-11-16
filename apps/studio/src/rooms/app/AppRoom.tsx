@@ -7,6 +7,9 @@ import { catalogData, type RoomResult } from "@ouispec/bindings";
 import { useRoomRegistration } from "@ouispec/bindings/react";
 import { appRoom, type AppCtx } from "./catalog";
 import { describeProblem, PANELS, useStudio, type Panel } from "../../studio";
+import { useBrand, type BrandResult } from "../../brand/brand";
+
+const asRoom = (r: BrandResult): RoomResult => (r.ok ? { ok: true, ...(r.data ? { data: r.data } : {}) } : { ok: false, code: r.code, message: r.message });
 
 const DATA = catalogData(appRoom);
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -14,6 +17,7 @@ const validators = Object.fromEntries(appRoom.actions.map((a) => [a.id, ajv.comp
 
 export function AppRoom() {
   const s = useStudio();
+  const b = useBrand();
   const ctx: AppCtx = useMemo(() => ({
     async applyOperations(input) {
       const r = await s.apply(input.operations as never, input.summary, "assistant");
@@ -52,7 +56,25 @@ export function AppRoom() {
       await s.reset();
       return { ok: true };
     },
-  }), [s]);
+    async captureBrand(input) {
+      s.setPanel("brand");
+      return asRoom(await b.captureFromUrl(input.url));
+    },
+    async setBrandDesignSystem(input) {
+      s.setPanel("brand");
+      return asRoom(await b.setDesignSystem(input.designSystem));
+    },
+    async chooseBrandOption(input) {
+      s.setPanel("brand");
+      return asRoom(await b.chooseOption(input.option, input.name, "assistant"));
+    },
+    async applyBrandKit(input) {
+      return asRoom(await b.applyKit(input.kit, "assistant"));
+    },
+    async stopBrandKit() {
+      return asRoom(await b.stopUsingKit("assistant"));
+    },
+  }), [s, b]);
 
   const run = (actionId: string, input: Record<string, unknown>): RoomResult | Promise<RoomResult> => {
     const action = appRoom.actions.find((a) => a.id === actionId);
@@ -73,6 +95,18 @@ export function AppRoom() {
         renderable: !!s.view?.verdict.renderable,
         errors: (s.view?.verdict.errors ?? []).map(describeProblem),
         warnings: (s.view?.verdict.warnings ?? []).map(describeProblem),
+      },
+      brand: {
+        look: b.current ? `brand kit ${b.current.id} (${b.current.name}: ${b.current.option.title}, ${b.current.designSystem} style)` : `theme ${def?.extensions?.["umf.ux"]?.look?.theme ?? "plain"}`,
+        busy: b.busy ?? "",
+        capture: b.capture ? JSON.stringify({
+          site: b.capture.finalUrl, name: b.capture.name,
+          colours: b.capture.analysis.colours.map((c) => `${c.hex} (${c.sources.map((x) => x.label).join(", ")})`),
+          fonts: b.capture.analysis.fonts, style: b.capture.analysis.style.reason, designSystem: b.capture.designSystem,
+          options: b.capture.options.map((o) => ({ id: o.id, title: o.title, description: o.description, buttons: o.swatches.light.structure, links: o.swatches.light.accent, review: o.findings.map((f) => `${f.rule} (${f.appearance}): ${f.message}`) })),
+          notes: b.capture.notes,
+        }) : "",
+        kits: b.kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`),
       },
       preview: { tab: s.tab, person: s.person?.id ?? "", screen: s.location?.screen ?? "", people: s.people.map((p) => `${p.id}: ${p.name} (${p.roles.join(", ")})`), screens },
     },

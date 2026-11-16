@@ -8,9 +8,10 @@ import type { Identity, Location } from "@ux-builder/app-runtime/contract";
 import { api, onChange, type AppView } from "./api";
 import { navigate } from "./router";
 
-export type Panel = "overview" | "data" | "screens" | "actions" | "diagrams" | "rules" | "versions" | "deployment";
+export type Panel = "overview" | "brand" | "data" | "screens" | "actions" | "diagrams" | "rules" | "versions" | "deployment";
 export const PANELS: Array<{ id: Panel; label: string }> = [
   { id: "overview", label: "Overview" },
+  { id: "brand", label: "Brand and style" },
   { id: "data", label: "Data" },
   { id: "screens", label: "Screens" },
   { id: "actions", label: "Actions" },
