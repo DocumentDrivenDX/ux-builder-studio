@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.closurestudio.ai/oui/v1/tier2-mapping.json",
+  "package": "@ux-builder/ui",
+  "controls": {
+    "Button": { "kind": "button", "callbacks": ["onClick"], "titleProps": ["aria-label", "children"] },
+    "TextField": { "kind": "text", "callbacks": ["onChange"], "valueFrom": { "arg": 0, "path": "target.value" }, "controlled": "value", "titleProps": ["label"] },
+    "TextArea": { "kind": "text", "callbacks": ["onChange"], "valueFrom": { "arg": 0, "path": "target.value" }, "controlled": "value", "titleProps": ["label"] },
+    "Select": { "kind": "choice", "callbacks": ["onChange"], "valueFrom": { "arg": 0, "path": "target.value" }, "controlled": "value", "options": { "prop": "options", "value": "value", "title": "label" }, "titleProps": ["label"] },
+    "ChoicePicker": { "kind": "choice", "callbacks": ["onChange"], "valueFrom": { "arg": 0 }, "controlled": "value", "options": { "prop": "options", "value": "value", "title": "label" }, "titleProps": ["label"] },
+    "Switch": { "kind": "toggle", "callbacks": ["onChange"], "valueFrom": { "arg": 0, "path": "target.checked" }, "controlled": "checked", "titleProps": ["label"] },
+    "Tabs": { "kind": "tabs", "callbacks": ["onChange"], "valueFrom": { "arg": 0 }, "controlled": "value", "options": { "prop": "tabs", "value": "id", "title": "label" }, "titleProps": ["label"] }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "Button": {
+    "callbacks": [
+      "onClick"
+    ],
+    "kind": "button",
+    "titleProps": [
+      "aria-label",
+      "children"
+    ]
+  },
+  "ChoicePicker": {
+    "callbacks": [
+      "onChange"
+    ],
+    "kind": "choice",
+    "options": {
+      "prop": "options",
+      "title": "label",
+      "value": "value"
+    },
+    "titleProps": [
+      "label"
+    ]
+  },
+  "Select": {
+    "callbacks": [
+      "onChange"
+    ],
+    "kind": "choice",
+    "options": {
+      "prop": "options",
+      "title": "label",
+      "value": "value"
+    },
+    "titleProps": [
+      "label"
+    ]
+  },
+  "Switch": {
+    "callbacks": [
+      "onChange"
+    ],
+    "kind": "toggle",
+    "titleProps": [
+      "label"
+    ]
+  },
+  "Tabs": {
+    "callbacks": [
+      "onChange"
+    ],
+    "container": {
+      "kind": "tabs",
+      "stateProp": "value"
+    },
+    "kind": "tabs",
+    "options": {
+      "prop": "tabs",
+      "title": "label",
+      "value": "id"
+    },
+    "titleProps": [
+      "label"
+    ]
+  },
+  "TextArea": {
+    "callbacks": [
+      "onChange"
+    ],
+    "kind": "text",
+    "titleProps": [
+      "label"
+    ]
+  },
+  "TextField": {
+    "callbacks": [
+      "onChange"
+    ],
+    "kind": "text",
+    "titleProps": [
+      "label"
+    ]
+  }
+}

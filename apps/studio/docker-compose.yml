@@ -1,0 +1,16 @@
+# Optional: a real PostgreSQL 18 for the studio instead of the embedded PGlite.
+# docker compose up -d, then set DATABASE_URL in .env (see .env.example).
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+      POSTGRES_DB: studio
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["studio-pg:/var/lib/postgresql"]
+  redis:
+    image: redis:8
+    ports: ["127.0.0.1:6379:6379"]
+volumes:
+  studio-pg: {}

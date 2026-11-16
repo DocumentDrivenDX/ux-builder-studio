@@ -1,0 +1,22 @@
+{
+  "name": "@ux-builder/app-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "Renders an app definition (app profile 0.1) with @ux-builder/ui widgets and patterns only: no per-app code. A host supplies the data through the DataClient contract.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contract": "./src/contract.ts",
+    "./runtime.css": "./src/runtime.css",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@ux-builder/app-definition": "*"
+  },
+  "peerDependencies": {
+    "@ux-builder/ui": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

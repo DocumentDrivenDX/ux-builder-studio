@@ -1,0 +1,317 @@
+{
+  "id": "umf.ux",
+  "version": "0.1.0",
+  "coreVersion": "0.10.0",
+  "description": "An app's user experience, at document scope: its look, its shell and navigation, and its screens, each built from ux-builder patterns whose regions bind to core records, umf.app derived values and umf.actions actions. This is ux-builder's interaction semantics carried in UMF; rendering is a separate, qualified renderer.",
+  "semantics": "App profile 0.1 (ux-builder studio). A screen chooses one pattern (collection, record, form, schedule, dashboard, queue, home) and lists regions in reading order. Every region and action placement resolves to core records and fields, umf.app derived values, umf.app roles and umf.actions actions; nothing renders that does not resolve. Action placements say where an action is offered, how its parameters are bound (from the row, the screen's parameter, the signed-in person or a literal), whether it needs confirmation and when it shows. A screen is visible to the roles it lists (all roles when none are listed). Navigation names destinations per role. Conditions and text templates are umf.app.expr 1 expressions. Static UX rules (reachability, confirmation of destructive actions, empty states, role consistency) are checked on the declaration, before anything renders.",
+  "scopes": ["document"],
+  "capabilities": {
+    "validation": "semantic",
+    "directions": ["export"],
+    "native": {
+      "system": "ux-builder patterns (@ux-builder/ui)",
+      "version": "0.1.0",
+      "subset": "Responsive-web app shell, navigation and pattern-based screens for app profile 0.1; rendered by the ux-builder studio runtime with @ux-builder/ui widgets and patterns only"
+    },
+    "evidence": ["packages/app-definition/test/vocabularies.test.mjs"]
+  },
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:umf:ux:0.1.0",
+    "title": "UMF ux vocabulary 0.1.0",
+    "type": "object",
+    "required": ["modality", "look", "shell", "screens"],
+    "properties": {
+      "modality": { "enum": ["responsive-web"] },
+      "look": {
+        "type": "object",
+        "required": ["theme"],
+        "properties": {
+          "theme": { "type": "string", "minLength": 1, "description": "A @ux-builder/tokens theme name, or a studio brand kit id." },
+          "appearance": { "enum": ["system", "light", "dark"] },
+          "designSystem": { "enum": ["databricks", "material", "fluent", "carbon", "own"] },
+          "brandKit": { "type": "string", "description": "The studio brand kit this look came from, if any." }
+        },
+        "additionalProperties": false
+      },
+      "shell": {
+        "type": "object",
+        "required": ["title", "frame", "navigation"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "frame": { "enum": ["side-nav", "top-nav", "top-bar"] },
+          "navigation": { "type": "array", "minItems": 1, "maxItems": 24, "items": { "$ref": "#/$defs/navItem" } },
+          "home": {
+            "type": "array",
+            "description": "The first screen per role, in order; the first match wins.",
+            "items": {
+              "type": "object",
+              "required": ["roles", "screen"],
+              "properties": { "roles": { "type": "array", "minItems": 1, "items": { "type": "string" } }, "screen": { "$ref": "#/$defs/id" } },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "screens": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "#/$defs/screen" } }
+    },
+    "$defs": {
+      "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$" },
+      "ref": {
+        "type": "object",
+        "required": ["module", "element"],
+        "properties": { "module": { "type": "string", "minLength": 1 }, "element": { "type": "string", "minLength": 1 } },
+        "additionalProperties": false
+      },
+      "rule": {
+        "type": "object",
+        "required": ["language", "version", "expression", "references"],
+        "properties": {
+          "language": { "const": "umf.app.expr" },
+          "version": { "const": "1" },
+          "expression": { "type": "string", "minLength": 1, "maxLength": 65536 },
+          "references": { "type": "array", "maxItems": 128 }
+        },
+        "additionalProperties": false
+      },
+      "text": {
+        "description": "Literal text, or an expression whose value is the text.",
+        "oneOf": [{ "type": "string" }, { "$ref": "#/$defs/rule" }]
+      },
+      "icon": { "type": "string", "minLength": 1 },
+      "roles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+      "navItem": {
+        "type": "object",
+        "required": ["id", "label", "screen"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "label": { "$ref": "#/$defs/text" },
+          "icon": { "$ref": "#/$defs/icon" },
+          "screen": { "$ref": "#/$defs/id" },
+          "roles": { "$ref": "#/$defs/roles" }
+        },
+        "additionalProperties": false
+      },
+      "valueRef": {
+        "description": "A column or display value: a core field, a umf.app derived value (by id) or an expression.",
+        "type": "object",
+        "properties": {
+          "field": { "$ref": "#/$defs/ref" },
+          "derived": { "type": "string" },
+          "value": { "$ref": "#/$defs/rule" },
+          "label": { "type": "string" },
+          "format": { "enum": ["text", "number", "currency", "hours", "date", "datetime", "time", "percent", "status", "email", "multiline"] },
+          "status": { "$ref": "#/$defs/statusMap" },
+          "link": { "$ref": "#/$defs/navigate" },
+          "secondary": { "$ref": "#/$defs/rule" },
+          "priority": { "type": "boolean" },
+          "numeric": { "type": "boolean" },
+          "wide": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "statusMap": {
+        "description": "Status pill styling per value: tone is one of the SDK's pill states.",
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "required": ["tone"],
+          "properties": { "tone": { "enum": ["live", "limited", "purchasing", "evaluation", "closed", "neutral"] }, "label": { "type": "string" } },
+          "additionalProperties": false
+        }
+      },
+      "navigate": {
+        "type": "object",
+        "required": ["screen"],
+        "properties": {
+          "screen": { "$ref": "#/$defs/id" },
+          "param": { "description": "The value passed as the target screen's parameter.", "$ref": "#/$defs/rule" }
+        },
+        "additionalProperties": false
+      },
+      "binding": {
+        "type": "object",
+        "required": ["parameter"],
+        "properties": {
+          "parameter": { "type": "string", "minLength": 1 },
+          "from": { "enum": ["row", "param", "user", "value", "selection", "input"] },
+          "value": { "$ref": "#/$defs/rule" }
+        },
+        "additionalProperties": false
+      },
+      "placement": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": { "type": "string", "minLength": 1, "description": "A umf.actions action id." },
+          "label": { "type": "string" },
+          "emphasis": { "enum": ["primary", "secondary", "text", "destructive"] },
+          "bind": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
+          "inputs": { "type": "array", "description": "Parameters the person fills in, in order, with control overrides.", "items": { "$ref": "#/$defs/control" } },
+          "confirm": {
+            "type": "object",
+            "required": ["title"],
+            "properties": {
+              "title": { "$ref": "#/$defs/text" },
+              "message": { "$ref": "#/$defs/text" },
+              "confirmLabel": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "when": { "$ref": "#/$defs/rule" },
+          "roles": { "$ref": "#/$defs/roles" },
+          "success": {
+            "type": "object",
+            "properties": { "toast": { "$ref": "#/$defs/text" }, "navigate": { "$ref": "#/$defs/navigate" } },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "control": {
+        "type": "object",
+        "required": ["parameter"],
+        "properties": {
+          "parameter": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "hint": { "type": "string" },
+          "control": { "enum": ["text", "textarea", "number", "currency", "hours", "date", "time", "datetime", "select", "choice", "checkbox", "switch", "email", "file"] },
+          "options": {
+            "description": "For select and choice: rows of a record (value = key, label = field) or fixed values.",
+            "type": "object",
+            "properties": {
+              "record": { "$ref": "#/$defs/ref" },
+              "label": { "$ref": "#/$defs/ref" },
+              "filter": { "$ref": "#/$defs/rule" },
+              "values": { "type": "array", "items": { "type": "object", "required": ["value", "label"], "properties": { "value": {}, "label": { "type": "string" } } } }
+            },
+            "additionalProperties": false
+          },
+          "default": { "$ref": "#/$defs/rule" }
+        },
+        "additionalProperties": false
+      },
+      "screen": {
+        "type": "object",
+        "required": ["id", "title", "pattern", "regions"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "title": { "$ref": "#/$defs/text" },
+          "description": { "$ref": "#/$defs/text" },
+          "pattern": { "enum": ["collection", "record", "form", "schedule", "dashboard", "queue", "home"] },
+          "roles": { "$ref": "#/$defs/roles" },
+          "param": {
+            "type": "object",
+            "description": "The screen's one parameter: the key of a row of this record.",
+            "required": ["id", "record"],
+            "properties": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }, "record": { "$ref": "#/$defs/ref" } },
+            "additionalProperties": false
+          },
+          "back": { "$ref": "#/$defs/navigate" },
+          "actions": { "type": "array", "description": "Header actions.", "items": { "$ref": "#/$defs/placement" } },
+          "regions": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/region" } }
+        },
+        "additionalProperties": false
+      },
+      "region": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "kind": { "enum": ["collection", "record", "related", "form", "schedule", "stats", "notice", "actions", "document"] },
+          "title": { "$ref": "#/$defs/text" },
+          "description": { "$ref": "#/$defs/text" },
+          "when": { "$ref": "#/$defs/rule" },
+          "roles": { "$ref": "#/$defs/roles" },
+
+          "record": { "$ref": "#/$defs/ref" },
+          "relationship": { "type": "string", "description": "related: the relationship from the screen's row." },
+          "filter": { "$ref": "#/$defs/rule" },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["by"],
+              "properties": { "by": { "$ref": "#/$defs/valueRef" }, "direction": { "enum": ["ascending", "descending"] } },
+              "additionalProperties": false
+            }
+          },
+          "columns": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+          "fields": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+          "search": { "type": "array", "description": "collection: fields searched by the search box.", "items": { "$ref": "#/$defs/ref" } },
+          "groupBy": { "$ref": "#/$defs/valueRef" },
+          "rowActions": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+          "bulkActions": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+          "rowLink": { "$ref": "#/$defs/navigate" },
+          "empty": {
+            "type": "object",
+            "required": ["title"],
+            "properties": { "title": { "$ref": "#/$defs/text" }, "message": { "$ref": "#/$defs/text" } },
+            "additionalProperties": false
+          },
+          "totals": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+
+          "action": { "type": "string", "description": "form: the umf.actions action the form submits." },
+          "inputs": { "type": "array", "items": { "$ref": "#/$defs/control" } },
+          "bind": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
+          "submitLabel": { "type": "string" },
+          "success": {
+            "type": "object",
+            "properties": { "toast": { "$ref": "#/$defs/text" }, "navigate": { "$ref": "#/$defs/navigate" } },
+            "additionalProperties": false
+          },
+
+          "start": { "$ref": "#/$defs/ref" },
+          "end": { "$ref": "#/$defs/ref" },
+          "label": { "$ref": "#/$defs/valueRef" },
+          "detail": { "$ref": "#/$defs/valueRef" },
+          "colorBy": { "$ref": "#/$defs/valueRef" },
+          "hours": {
+            "type": "object",
+            "properties": { "from": { "type": "integer", "minimum": 0, "maximum": 23 }, "to": { "type": "integer", "minimum": 1, "maximum": 24 } },
+            "additionalProperties": false
+          },
+          "eventActions": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+          "legend": { "type": "array", "items": { "type": "object", "required": ["label"], "properties": { "label": { "type": "string" }, "description": { "type": "string" } } } },
+
+          "tiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "value"],
+              "properties": { "label": { "type": "string" }, "value": { "$ref": "#/$defs/rule" }, "format": { "enum": ["text", "number", "currency", "hours", "percent"] } },
+              "additionalProperties": false
+            }
+          },
+
+          "tone": { "enum": ["info", "accent", "success", "warning", "error"] },
+          "message": { "$ref": "#/$defs/text" },
+
+          "items": { "type": "array", "description": "actions: the buttons this region offers.", "items": { "$ref": "#/$defs/placement" } },
+
+          "sections": {
+            "type": "array",
+            "description": "document: a printable record view (for example an invoice), section by section.",
+            "items": {
+              "type": "object",
+              "required": ["id"],
+              "properties": {
+                "id": { "$ref": "#/$defs/id" },
+                "title": { "$ref": "#/$defs/text" },
+                "fields": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+                "relationship": { "type": "string" },
+                "columns": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+                "rowActions": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+                "totals": { "type": "array", "items": { "$ref": "#/$defs/valueRef" } },
+                "empty": { "$ref": "#/$defs/text" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

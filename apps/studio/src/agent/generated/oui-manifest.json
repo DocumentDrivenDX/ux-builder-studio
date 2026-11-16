@@ -1,0 +1,1427 @@
+{
+  "buildId": "7ded51f7adae3544",
+  "surfaces": [
+    {
+      "actions": [
+        {
+          "control": "tabs",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Select a tab of \"Builder\": Which builder tab is shown: App configuration (the app's panels) or App preview (the live app)",
+          "id": "builder.tab",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The tab to select",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "builder_tab",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Builder"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Press \"Create variant\": Start creating a variant of this app (asks for its name)",
+          "id": "builder.variant",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "builder_variant",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Create variant"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/panels/DiagramsPanel.tsx",
+          "description": "Choose \"Diagram\": Which diagram of the app is shown: its data model, states, flows and journeys, or access.",
+          "id": "diagrams.choose",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "diagrams_choose",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Diagram"
+        },
+        {
+          "control": "toggle",
+          "declaredIn": "src/panels/DiagramsPanel.tsx",
+          "description": "Turn on or off \"Show derived values\": Whether the data model shows derived (computed) values.",
+          "id": "diagrams.derived",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "true to turn it on, false to turn it off",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "diagrams_derived",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Show derived values"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/panels/DiagramsPanel.tsx",
+          "description": "Press \"Download SVG\": Download the shown diagram as an SVG image.",
+          "id": "diagrams.download-svg",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "diagrams_download_svg",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Download SVG"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/panels/DiagramsPanel.tsx",
+          "description": "Press \"Download Mermaid\": Download the shown diagram as Mermaid (or a Markdown table for the access matrix)",
+          "id": "diagrams.download-text",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "diagrams_download_text",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Download Mermaid"
+        },
+        {
+          "control": "toggle",
+          "declaredIn": "src/panels/DiagramsPanel.tsx",
+          "description": "Turn on or off \"Fit to width\": Whether the diagram is scaled to the panel's width, or shown at full size with scrolling.",
+          "id": "diagrams.fit",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "true to turn it on, false to turn it off",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "diagrams_fit",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Fit to width"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Choose \"Appearance\": The app's default appearance: automatic, light or dark.",
+          "id": "look.appearance",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose: system = Auto; light = Light; dark = Dark",
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "look_appearance",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Appearance"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Choose \"Theme\": The app's theme (brand and design system)",
+          "id": "look.theme",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "look_theme",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Theme"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Choose \"Signed in as\": Which sample person the live preview is signed in as.",
+          "id": "preview.person",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "preview_person",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Signed in as"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Press \"Reset sample data\": Reset the preview's data to the app's sample data (asks first)",
+          "id": "preview.reset",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "preview_reset",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Reset sample data"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Press \"Cancel\": Close without creating a variant.",
+          "id": "variant.cancel",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "variant_cancel",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Cancel"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Press \"Create variant\": Create the variant with this name and note.",
+          "id": "variant.create",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "variant_create",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Create variant"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Type into \"Name\": The variant's name.",
+          "id": "variant.name",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "variant_name",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Name"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Type into \"What differs\": What the variant changes.",
+          "id": "variant.note",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "variant_note",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "What differs"
+        }
+      ],
+      "description": "The App page (/apps/:appId).",
+      "id": "page:AppPage",
+      "kind": "page",
+      "observations": [
+        {
+          "description": "What the page shows now. values: preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), variant.name (Name), variant.note (What differs), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
+          "id": "state",
+          "schema": {
+            "properties": {
+              "lists": {
+                "description": "The rows each list-row control is showing, by binding id: their ids (keys) and titles",
+                "type": "object"
+              },
+              "shown": {
+                "description": "What the page shows that is not a control, by display: its binding id, heading and facts, each as text by its label; facts that describe one row of a list (a card each) carry the row as item, and a long list of them keeps an index of its rows",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array",
+                "x-rows": {
+                  "index": [
+                    "id"
+                  ],
+                  "ref": "item.key",
+                  "title": "item.title"
+                }
+              },
+              "unavailable": {
+                "description": "Controls that cannot be used right now",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "values": {
+                "description": "Each field's current value, by binding id",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/apps/:appId"
+      ],
+      "title": "App"
+    },
+    {
+      "actions": [
+        {
+          "control": "button",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Press \"Create app\": Create the new app from the name and use case, and open it.",
+          "id": "new-app.create",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "new_app_create",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "Create app"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Type into \"App name\": The new app's name. Its placeholder, an example of what goes in it: \"Time tracker\".",
+          "id": "new-app.name",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_name",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "App name"
+        },
+        {
+          "control": "text",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Type into \"What should it do?\": The new app's use case, in the person's words. The field's hint: Who uses it, and what they need to get done.",
+          "id": "new-app.use-case",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The text to put in the field, replacing what is there",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_use_case",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "What should it do?"
+        }
+      ],
+      "description": "The Home page (/).",
+      "id": "page:HomePage",
+      "kind": "page",
+      "observations": [
+        {
+          "description": "What the page shows now. values: new-app.name (App name), new-app.use-case (What should it do?).",
+          "id": "state",
+          "schema": {
+            "properties": {
+              "lists": {
+                "description": "The rows each list-row control is showing, by binding id: their ids (keys) and titles",
+                "type": "object"
+              },
+              "shown": {
+                "description": "What the page shows that is not a control, by display: its binding id, heading and facts, each as text by its label; facts that describe one row of a list (a card each) carry the row as item, and a long list of them keeps an index of its rows",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array",
+                "x-rows": {
+                  "index": [
+                    "id"
+                  ],
+                  "ref": "item.key",
+                  "title": "item.title"
+                }
+              },
+              "unavailable": {
+                "description": "Controls that cannot be used right now",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "values": {
+                "description": "Each field's current value, by binding id",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/"
+      ],
+      "title": "Home"
+    },
+    {
+      "actions": [
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/RunPage.tsx",
+          "description": "Choose \"Signed in as (sample person)\": Which sample person the app is signed in as.",
+          "id": "run.person",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "run_person",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/run/:appId",
+              "title": "Run"
+            }
+          ],
+          "source": "control",
+          "title": "Signed in as (sample person)"
+        }
+      ],
+      "description": "The Run page (/run/:appId).",
+      "id": "page:RunPage",
+      "kind": "page",
+      "observations": [
+        {
+          "description": "What the page shows now. values: run.person (Signed in as (sample person)).",
+          "id": "state",
+          "schema": {
+            "properties": {
+              "lists": {
+                "description": "The rows each list-row control is showing, by binding id: their ids (keys) and titles",
+                "type": "object"
+              },
+              "shown": {
+                "description": "What the page shows that is not a control, by display: its binding id, heading and facts, each as text by its label; facts that describe one row of a list (a card each) carry the row as item, and a long list of them keeps an index of its rows",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array",
+                "x-rows": {
+                  "index": [
+                    "id"
+                  ],
+                  "ref": "item.key",
+                  "title": "item.title"
+                }
+              },
+              "unavailable": {
+                "description": "Controls that cannot be used right now",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "values": {
+                "description": "Each field's current value, by binding id",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/run/:appId"
+      ],
+      "title": "Run"
+    },
+    {
+      "actions": [
+        {
+          "description": "Apply changes: Applies a batch of operations to the app's definition, in order, and saves one new version if UMF validates the result. A refused batch saves nothing and returns the problems to fix. (The builder's edit panels (data, screens, actions, look))",
+          "effect": "edit",
+          "id": "app/action/apply-operations",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "operations": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "args": {
+                      "description": "The operation's arguments (see its schema in the knowledge)."
+                    },
+                    "op": {
+                      "enum": [
+                        "setIdentity",
+                        "setLook",
+                        "setShell",
+                        "addRole",
+                        "removeRole",
+                        "addRecord",
+                        "addField",
+                        "updateField",
+                        "removeField",
+                        "removeRecord",
+                        "addRelationship",
+                        "addDerived",
+                        "removeDerived",
+                        "addAccess",
+                        "addAction",
+                        "removeAction",
+                        "putScreen",
+                        "removeScreen",
+                        "setNavigation",
+                        "setSamples",
+                        "setIdentities",
+                        "applyPatch"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "args"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 40,
+                "minItems": 1,
+                "type": "array"
+              },
+              "summary": {
+                "description": "One sentence for the version history, e.g. \"Add invoices with lines and expenses\".",
+                "type": "string"
+              }
+            },
+            "required": [
+              "summary",
+              "operations"
+            ],
+            "type": "object"
+          },
+          "name": "app_apply_operations",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The builder's edit panels (data, screens, actions, look)"
+            }
+          ],
+          "source": "room-action",
+          "title": "Apply changes"
+        },
+        {
+          "description": "Create variant: Copies this app into a new catalog entry that records it as a variant of this one, and opens it. (The Create variant button)",
+          "effect": "edit",
+          "id": "app/action/create-variant",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "note": {
+                "description": "What differs",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "name": "app_create_variant",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The Create variant button"
+            }
+          ],
+          "source": "room-action",
+          "title": "Create variant"
+        },
+        {
+          "description": "Reset sample data: Throws away every change made in the preview and reloads the app's sample data. (The preview's Reset sample data button)",
+          "destructive": true,
+          "effect": "edit",
+          "id": "app/action/reset-data",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "app_reset_data",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The preview's Reset sample data button"
+            }
+          ],
+          "source": "room-action",
+          "title": "Reset sample data"
+        },
+        {
+          "description": "Restore version: Makes an earlier version of the definition the current one (as a new version). (A version's Restore button in the Versions panel)",
+          "destructive": true,
+          "effect": "edit",
+          "id": "app/action/restore-version",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "version"
+            ],
+            "type": "object"
+          },
+          "name": "app_restore_version",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "A version's Restore button in the Versions panel"
+            }
+          ],
+          "source": "room-action",
+          "title": "Restore version"
+        },
+        {
+          "description": "Set preview: Shows the App preview tab, and optionally signs the live preview in as one of the app's sample people, opens one of its screens (with its parameter, a row key), or switches light/dark. With no input it only shows the preview; do so after changing the app, so the person sees the result. (The App preview tab and its toolbar: Signed in as, screen and appearance)",
+          "effect": "edit",
+          "id": "app/action/set-preview",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "appearance": {
+                "enum": [
+                  "system",
+                  "light",
+                  "dark"
+                ],
+                "type": "string"
+              },
+              "param": {
+                "description": "The screen's parameter: a row key",
+                "type": "string"
+              },
+              "person": {
+                "description": "A sample person's id (see observations)",
+                "type": "string"
+              },
+              "screen": {
+                "description": "A screen id",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "name": "app_set_preview",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The App preview tab and its toolbar: Signed in as, screen and appearance"
+            }
+          ],
+          "source": "room-action",
+          "title": "Set preview"
+        },
+        {
+          "description": "Show panel: Shows the App configuration tab with one of its panels. (The App configuration tab and its panel tabs)",
+          "effect": "edit",
+          "id": "app/action/show-panel",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "panel": {
+                "enum": [
+                  "overview",
+                  "data",
+                  "screens",
+                  "actions",
+                  "diagrams",
+                  "rules",
+                  "versions",
+                  "deployment"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "panel"
+            ],
+            "type": "object"
+          },
+          "name": "app_show_panel",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The App configuration tab and its panel tabs"
+            }
+          ],
+          "source": "room-action",
+          "title": "Show panel"
+        }
+      ],
+      "description": "The app open in the builder: its definition (data, roles, actions, screens, navigation, sample data), its validation, and its live preview.",
+      "id": "room:app",
+      "kind": "room",
+      "observations": [
+        {
+          "description": "What the app holds: name, version, look, roles, records (fields and derived values), relationships, actions, screens, navigation, samples",
+          "id": "definition",
+          "schema": {
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "summary": {
+                "description": "The definition summary as JSON",
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "UMF's verdict on the current definition: whether it renders, and every problem and warning to fix",
+          "id": "validation",
+          "schema": {
+            "properties": {
+              "errors": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "renderable": {
+                "type": "boolean"
+              },
+              "warnings": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "The live preview: which builder tab is shown (configuration or preview), who the preview is signed in as, which screen it shows, and the people available",
+          "id": "preview",
+          "schema": {
+            "properties": {
+              "people": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "person": {
+                "type": "string"
+              },
+              "screen": {
+                "type": "string"
+              },
+              "screens": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "tab": {
+                "enum": [
+                  "configuration",
+                  "preview"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/apps/:appId"
+      ],
+      "title": "App builder"
+    },
+    {
+      "actions": [
+        {
+          "description": "Create app: Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case. (The New app form on the catalog page)",
+          "effect": "edit",
+          "id": "catalog/action/create-app",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "description": "One sentence on what the app does",
+                "maxLength": 300,
+                "type": "string"
+              },
+              "name": {
+                "description": "Short app name, e.g. Time tracker",
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              "theme": {
+                "description": "Optional starting theme name (default plain)",
+                "type": "string"
+              },
+              "useCase": {
+                "description": "What the person asked for, in their words",
+                "maxLength": 2000,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "name": "catalog_create_app",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "catalog",
+              "where": "The New app form on the catalog page"
+            }
+          ],
+          "source": "room-action",
+          "title": "Create app"
+        },
+        {
+          "description": "Open app: Opens an existing app in the builder. (An app's Open button in the catalog)",
+          "effect": "view",
+          "id": "catalog/action/open-app",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "appId": {
+                "description": "The app's id",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "appId"
+            ],
+            "type": "object"
+          },
+          "name": "catalog_open_app",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "catalog",
+              "where": "An app's Open button in the catalog"
+            }
+          ],
+          "source": "room-action",
+          "title": "Open app"
+        }
+      ],
+      "description": "Every app built in this studio. Creating an app opens it in the builder, where its data, screens and actions are designed.",
+      "id": "room:catalog",
+      "kind": "room",
+      "observations": [
+        {
+          "description": "The apps in the catalog",
+          "id": "catalog",
+          "schema": {
+            "properties": {
+              "apps": {
+                "description": "Each app as \"<id>: <name> (v<version>)\"",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "count": {
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/"
+      ],
+      "title": "App catalog"
+    },
+    {
+      "actions": [
+        {
+          "description": "Go to a page of the app, as following a link to it does. The page’s own tools are offered once it is open.",
+          "id": "app.navigate",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "params": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Each :parameter of the route by name, when path is written as the route: {\"id\": \"v_1\"} for /voices/:id. Encoded for you.",
+                "type": "object"
+              },
+              "path": {
+                "description": "The page’s address, with an id in place of each :parameter (or the route as listed, with params). The pages: / (Home), /apps/:appId (App), /run/:appId (Run).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "type": "object"
+          },
+          "name": "app_navigate",
+          "reach": [],
+          "source": "navigation",
+          "title": "Go to a page"
+        }
+      ],
+      "description": "Every page of the app, by its address, and the page the person is on.",
+      "id": "app:navigation",
+      "kind": "navigation",
+      "observations": [
+        {
+          "description": "The address of the page the person is on.",
+          "id": "location",
+          "schema": {
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What stops the page at this address from opening for the person: access it needs that they do not have, a load that failed. Reported here when the page itself is not open to report it; empty otherwise.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/",
+        "/apps/:appId",
+        "/run/:appId"
+      ],
+      "title": "Pages"
+    }
+  ],
+  "version": 1
+}

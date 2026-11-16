@@ -1,0 +1,26 @@
+{
+  "name": "ux-builder-studio",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "UX Builder Studio: an App Expert builds apps with you as UMF definitions, rendered with ux-builder and backed by tables UMF deploys. Runs locally.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "vendor/ux-builder/packages/tokens",
+    "vendor/ux-builder/packages/ui",
+    "vendor/ux-builder/packages/visuals",
+    "vendor/ux-builder/packages/engine"
+  ],
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "npm run dev --workspace @ux-builder/studio",
+    "test": "npm test --workspace @ux-builder/studio",
+    "typecheck": "npm run typecheck --workspace @ux-builder/studio",
+    "check": "npm run typecheck && npm test && npm run oui:check --workspace @ux-builder/studio",
+    "e2e": "npm run e2e --workspace @ux-builder/studio"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

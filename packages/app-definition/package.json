@@ -1,0 +1,17 @@
+{
+  "name": "@ux-builder/app-definition",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "App definitions as UMF documents: the umf.app and umf.ux 0.1 vocabularies (registered through UMF's public extension API), app profile 0.1, the umf.app.expr expression language, and typed operations that edit a definition into canonical UMF.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./vocabularies/*": "./vocabularies/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "vocabularies", "README.md"],
+  "scripts": {
+    "test": "node --test 'test/*.test.mjs'"
+  }
+}

@@ -1,0 +1,4 @@
+[submodule "vendor/ux-builder"]
+	path = vendor/ux-builder
+	url = https://github.com/DocumentDrivenDX/ux-builder.git
+	ignore = dirty

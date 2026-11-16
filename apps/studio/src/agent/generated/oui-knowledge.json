@@ -1,0 +1,103 @@
+{
+  "buildId": "7ded51f7adae3544",
+  "overview": {
+    "content": "3 more pages are reached from these or by address; the page you are on is described in full below, and moving to another page gives you its tools.\nGo to any page by its address with [app_navigate]; its path lists every page.",
+    "title": "The app’s pages"
+  },
+  "pages": [
+    {
+      "adjacent": [],
+      "detail": {
+        "content": "The App page (/apps/:appId).\nWhere: reached by address (/apps/:appId) or from another page.\n\nWhat you can do here (tool in brackets):\nOn the page:\n- Builder [builder_tab]\n- Create variant [builder_variant]\n- Diagram [diagrams_choose]\n- Show derived values [diagrams_derived]\n- Download SVG [diagrams_download_svg]\n- Download Mermaid [diagrams_download_text]\n- Fit to width [diagrams_fit]\n- Appearance [look_appearance]\n- Theme [look_theme]\n- Signed in as [preview_person]\n- Reset sample data [preview_reset]\n- Cancel [variant_cancel]\n- Create variant [variant_create]\n- Name [variant_name]\n- What differs [variant_note]\n\nApp builder (on this page): The app open in the builder: its definition (data, roles, actions, screens, navigation, sample data), its validation, and its live preview.\nActions:\n- Apply changes [app_apply_operations]: The builder's edit panels (data, screens, actions, look)\n- Set preview [app_set_preview]: The App preview tab and its toolbar: Signed in as, screen and appearance\n- Show panel [app_show_panel]: The App configuration tab and its panel tabs\n- Create variant [app_create_variant]: The Create variant button\n- Restore version [app_restore_version]: A version's Restore button in the Versions panel (confirm first)\n- Reset sample data [app_reset_data]: The preview's Reset sample data button (confirm first)\nWhat it reports: definition — What the app holds: name, version, look, roles, records (fields and derived values), relationships, actions, screens, navigation, samples validation — UMF's verdict on the current definition: whether it renders, and every problem and warning to fix preview — The live preview: which builder tab is shown (configuration or preview), who the preview is signed in as, which screen it shows, and the people available problems — What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.\n\nWhat the page reports: state (its fields, lists and unavailable controls) and problems.",
+        "title": "App (/apps/:appId)"
+      },
+      "recipes": [
+        {
+          "name": "Create variant and style it",
+          "steps": [
+            "Make it with app_create_variant; the result names it and it is selected.",
+            "Read definition and problems; if something is not drawn, fix that before saying it is done."
+          ],
+          "trigger": "Making something new with Create variant in the App builder"
+        },
+        {
+          "name": "Fix what the App builder reports",
+          "steps": [
+            "Read problems: each says what is wrong, what it hides, and which action resolves it.",
+            "Resolve each with the action it names, using one of the choices it offers.",
+            "Read definition and problems; if something is not drawn, fix that before saying it is done."
+          ],
+          "trigger": "problems lists anything, or the user cannot see something"
+        }
+      ],
+      "relationships": {
+        "content": "These make something new and select it: Create variant.",
+        "title": "App: how things relate"
+      },
+      "routes": [
+        "/apps/:appId"
+      ],
+      "summary": {
+        "content": "App (/apps/:appId): The App page (/apps/:appId).",
+        "title": "App"
+      },
+      "surface": "page:AppPage"
+    },
+    {
+      "adjacent": [],
+      "detail": {
+        "content": "The Home page (/).\nWhere: reached by address (/) or from another page.\n\nWhat you can do here (tool in brackets):\nOn the page:\n- Create app [new_app_create]\n- App name [new_app_name]\n- What should it do? [new_app_use_case]\n\nApp catalog (on this page): Every app built in this studio. Creating an app opens it in the builder, where its data, screens and actions are designed.\nActions:\n- Create app [catalog_create_app]: The New app form on the catalog page\n- Open app [catalog_open_app]: An app's Open button in the catalog\nWhat it reports: catalog — The apps in the catalog problems — What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.\n\nWhat the page reports: state (its fields, lists and unavailable controls) and problems.",
+        "title": "Home (/)"
+      },
+      "recipes": [
+        {
+          "name": "Create app and style it",
+          "steps": [
+            "Make it with catalog_create_app; the result names it and it is selected.",
+            "Read catalog and problems; if something is not drawn, fix that before saying it is done."
+          ],
+          "trigger": "Making something new with Create app in the App catalog"
+        },
+        {
+          "name": "Fix what the App catalog reports",
+          "steps": [
+            "Read problems: each says what is wrong, what it hides, and which action resolves it.",
+            "Resolve each with the action it names, using one of the choices it offers.",
+            "Read catalog and problems; if something is not drawn, fix that before saying it is done."
+          ],
+          "trigger": "problems lists anything, or the user cannot see something"
+        }
+      ],
+      "relationships": {
+        "content": "These make something new and select it: Create app.",
+        "title": "Home: how things relate"
+      },
+      "routes": [
+        "/"
+      ],
+      "summary": {
+        "content": "Home (/): The Home page (/).",
+        "title": "Home"
+      },
+      "surface": "page:HomePage"
+    },
+    {
+      "adjacent": [],
+      "detail": {
+        "content": "The Run page (/run/:appId).\nWhere: reached by address (/run/:appId) or from another page.\n\nWhat you can do here (tool in brackets):\nOn the page:\n- Signed in as (sample person) [run_person]\n\nWhat the page reports: state (its fields, lists and unavailable controls) and problems.",
+        "title": "Run (/run/:appId)"
+      },
+      "recipes": [],
+      "relationships": null,
+      "routes": [
+        "/run/:appId"
+      ],
+      "summary": {
+        "content": "Run (/run/:appId): The Run page (/run/:appId).",
+        "title": "Run"
+      },
+      "surface": "page:RunPage"
+    }
+  ],
+  "version": 1
+}
