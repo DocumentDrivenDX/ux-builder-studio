@@ -6,6 +6,7 @@ import { useRoomRegistration } from "@ouispec/bindings/react";
 import { catalogRoom, type CatalogCtx } from "./catalog";
 import { api, type BrandKit, type CatalogEntry } from "../../api";
 import { navigate } from "../../router";
+import { setStudioAppearance, useStudioAppearance } from "../../appearance";
 
 const DATA = catalogData(catalogRoom);
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -14,7 +15,9 @@ const validators = Object.fromEntries(catalogRoom.actions.map((a) => [a.id, ajv.
 export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
   const [kits, setKits] = useState<BrandKit[]>([]);
   useEffect(() => { api.brandKits().then((r) => setKits(r.kits)).catch(() => {}); }, [apps]);
+  const look = useStudioAppearance();
   const ctx: CatalogCtx = useMemo(() => ({
+    setStudioAppearance: (input) => setStudioAppearance(look, input.appearance),
     async createApp(input) {
       try {
         const kit = input.brandKit ? kits.find((k) => k.id === input.brandKit) : undefined;
@@ -31,7 +34,7 @@ export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
       navigate(`/apps/${encodeURIComponent(input.appId)}`);
       return { ok: true };
     },
-  }), [apps, kits]);
+  }), [apps, kits, look]);
   const run = (actionId: string, input: Record<string, unknown>): RoomResult | Promise<RoomResult> => {
     const action = catalogRoom.actions.find((a) => a.id === actionId);
     const validate = validators[actionId];

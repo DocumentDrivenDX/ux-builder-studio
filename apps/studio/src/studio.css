@@ -1,7 +1,15 @@
 /* The studio's own layout, styled only with ux-builder role tokens. */
+html, body { margin: 0; }
 .studio-root { min-height: 100dvh; background: var(--piq-color-ground); color: var(--piq-color-text); font-family: var(--piq-font-body); }
 .studio { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); height: 100dvh; }
-.studio__bar { grid-column: 1 / -1; display: flex; align-items: baseline; gap: var(--piq-space-4); padding: var(--piq-space-3) var(--piq-space-5); border-block-end: var(--piq-border-default) solid var(--piq-color-border); background: var(--piq-color-surface); }
+.studio__bar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--piq-space-4); padding: var(--piq-space-3) var(--piq-space-5); border-block-end: var(--piq-border-default) solid var(--piq-color-border); background: var(--piq-color-surface); }
+/* The page behind the studio (overscroll, the scrollbar) follows the studio's appearance; ThemeProvider sets it for everything inside. */
+:root:has(> body > #root > .studio-root[data-appearance="dark"]) { color-scheme: dark; }
+.studio__appearance { margin-inline-start: auto; }
+/* At the bar's right edge, the tooltip opens leftwards so it stays on screen. */
+.studio__appearance .piq-tooltip { inset-inline: auto 0; translate: 0 var(--piq-space-1); }
+@media (max-width: 640px) { .studio__bar > .studio-meta { order: 2; flex-basis: 100%; } }
+.studio__appearance-button { min-inline-size: 2.5rem; min-block-size: 2.5rem; padding: var(--piq-space-2); }
 .studio__brand { font-family: var(--piq-font-heading); font-weight: var(--piq-font-weight-strong, 600); color: var(--piq-color-text-strong, var(--piq-color-text)); text-decoration: none; }
 .studio__main { overflow: auto; min-width: 0; }
 /* The App Expert's panel: docked (a grid column whose width is dragged from its left edge) or floating. */

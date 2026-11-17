@@ -8,6 +8,7 @@ import { useRoomRegistration } from "@ouispec/bindings/react";
 import { appRoom, type AppCtx } from "./catalog";
 import { describeProblem, PANELS, useStudio, type Panel } from "../../studio";
 import { useBrand, type BrandResult } from "../../brand/brand";
+import { setStudioAppearance, useStudioAppearance } from "../../appearance";
 
 const asRoom = (r: BrandResult): RoomResult => (r.ok ? { ok: true, ...(r.data ? { data: r.data } : {}) } : { ok: false, code: r.code, message: r.message });
 
@@ -18,7 +19,9 @@ const validators = Object.fromEntries(appRoom.actions.map((a) => [a.id, ajv.comp
 export function AppRoom() {
   const s = useStudio();
   const b = useBrand();
+  const look = useStudioAppearance();
   const ctx: AppCtx = useMemo(() => ({
+    setStudioAppearance: (input) => setStudioAppearance(look, input.appearance),
     async applyOperations(input) {
       const r = await s.apply(input.operations as never, input.summary, "assistant");
       if (r.ok) return { ok: true, data: { version: r.version, databaseRedeployed: r.redeployed } };
@@ -87,7 +90,7 @@ export function AppRoom() {
     async stopBrandKit() {
       return asRoom(await b.stopUsingKit("assistant"));
     },
-  }), [s, b]);
+  }), [s, b, look]);
 
   const run = (actionId: string, input: Record<string, unknown>): RoomResult | Promise<RoomResult> => {
     const action = appRoom.actions.find((a) => a.id === actionId);

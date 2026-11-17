@@ -1,5 +1,5 @@
 {
-  "buildId": "fcbe66ad52b8e592",
+  "buildId": "d5b33f3fe018a86f",
   "surfaces": [
     {
       "actions": [
@@ -1575,6 +1575,39 @@
           "title": "Set preview"
         },
         {
+          "description": "Set the studio's appearance: Switches the studio itself to light or dark mode, or back to following the computer's setting (system), when the person asks. It does not change an app's look or its preview's appearance (that is the app's own appearance). (The sun/moon button in the studio's top bar)",
+          "effect": "view",
+          "id": "app/action/set-studio-appearance",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "appearance": {
+                "description": "light, dark, or system to follow the computer's setting",
+                "enum": [
+                  "light",
+                  "dark",
+                  "system"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "appearance"
+            ],
+            "type": "object"
+          },
+          "name": "app_set_studio_appearance",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "The sun/moon button in the studio's top bar"
+            }
+          ],
+          "source": "room-action",
+          "title": "Set the studio's appearance"
+        },
+        {
           "description": "Show panel: Shows the App configuration tab with one of its panels. (The App configuration tab and its panel tabs)",
           "effect": "edit",
           "id": "app/action/show-panel",
@@ -1882,6 +1915,39 @@
           ],
           "source": "room-action",
           "title": "Open app"
+        },
+        {
+          "description": "Set the studio's appearance: Switches the studio itself to light or dark mode, or back to following the computer's setting (system), when the person asks. It does not change an app's look or its preview's appearance (that is the app's own appearance). (The sun/moon button in the studio's top bar)",
+          "effect": "view",
+          "id": "catalog/action/set-studio-appearance",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "appearance": {
+                "description": "light, dark, or system to follow the computer's setting",
+                "enum": [
+                  "light",
+                  "dark",
+                  "system"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "appearance"
+            ],
+            "type": "object"
+          },
+          "name": "catalog_set_studio_appearance",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "catalog",
+              "where": "The sun/moon button in the studio's top bar"
+            }
+          ],
+          "source": "room-action",
+          "title": "Set the studio's appearance"
         }
       ],
       "description": "Every app built in this studio. Creating an app opens it in the builder, where its data, screens and actions are designed.",

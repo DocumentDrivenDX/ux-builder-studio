@@ -5,6 +5,7 @@ import type { RoomCatalog, RoomResult } from "@ouispec/bindings";
 export interface CatalogCtx {
   createApp(input: { name: string; useCase?: string; description?: string; theme?: string; brandKit?: string; appearance?: "system" | "light" | "dark" }): Promise<RoomResult>;
   openApp(input: { appId: string }): RoomResult;
+  setStudioAppearance(input: { appearance: "light" | "dark" | "system" }): RoomResult;
 }
 
 export const catalogRoom: RoomCatalog<CatalogCtx> = {
@@ -12,6 +13,16 @@ export const catalogRoom: RoomCatalog<CatalogCtx> = {
   title: "App catalog",
   description: "Every app built in this studio. Creating an app opens it in the builder, where its data, screens and actions are designed.",
   actions: [
+    {
+      kind: "action",
+      id: "set-studio-appearance",
+      title: "Set the studio's appearance",
+      description: "Switches the studio itself to light or dark mode, or back to following the computer's setting (system), when the person asks. It does not change an app's look or its preview's appearance (that is the app's own appearance).",
+      control: "The sun/moon button in the studio's top bar",
+      input: { type: "object", properties: { appearance: { type: "string", enum: ["light", "dark", "system"], description: "light, dark, or system to follow the computer's setting" } }, required: ["appearance"], additionalProperties: false },
+      effect: "view",
+      run: (ctx, input) => ctx.setStudioAppearance(input as never),
+    },
     {
       kind: "action",
       id: "create-app",

@@ -18,6 +18,7 @@ export interface AppCtx {
   adjustBrandOption(input: { option: string; hueShift?: number; chromaScale?: number; neutralTint?: number; stateHarmony?: number; groundLight?: number; groundDark?: number }): Promise<RoomResult>;
   resetBrandOption(input: { option: string }): RoomResult;
   captureBrandLogo(): RoomResult;
+  setStudioAppearance(input: { appearance: "light" | "dark" | "system" }): RoomResult;
   applyBrandKit(input: { kit: string }): Promise<RoomResult>;
   stopBrandKit(): Promise<RoomResult>;
 }
@@ -27,6 +28,16 @@ export const appRoom: RoomCatalog<AppCtx> = {
   title: "App builder",
   description: "The app open in the builder: its definition (data, roles, actions, screens, navigation, sample data), its validation, and its live preview.",
   actions: [
+    {
+      kind: "action",
+      id: "set-studio-appearance",
+      title: "Set the studio's appearance",
+      description: "Switches the studio itself to light or dark mode, or back to following the computer's setting (system), when the person asks. It does not change an app's look or its preview's appearance (that is the app's own appearance).",
+      control: "The sun/moon button in the studio's top bar",
+      input: { type: "object", properties: { appearance: { type: "string", enum: ["light", "dark", "system"], description: "light, dark, or system to follow the computer's setting" } }, required: ["appearance"], additionalProperties: false },
+      effect: "view",
+      run: (ctx, input) => ctx.setStudioAppearance(input as never),
+    },
     {
       kind: "action",
       id: "apply-operations",
