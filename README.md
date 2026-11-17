@@ -28,11 +28,52 @@ cd ux-builder-studio
 npm ci
 npm run setup                                    # patches and builds ux-builder, fetches UMF's SDK
 cp apps/studio/.env.example apps/studio/.env     # add ANTHROPIC_API_KEY (or OPENAI_API_KEY)
-npm run dev                                      # http://localhost:5173
+npm run dev                                      # http://localhost:5173, then sign in
 ```
 
 Without a model key the App Expert is a scripted builder that replays one
 recorded build (a time tracker), which is what the tests use.
+
+## Signing in, and apps on the organisation's data
+
+People sign in as themselves, and can build three kinds of app:
+
+- **Reporting** on tables in the organisation's data catalog: dashboards,
+  charts and lists, read only.
+- **Data management**: look up, add and correct rows in catalog tables.
+- **Its own data**: a data model the App Expert designs, with sample data.
+
+Rows in the first two are read and changed **as whoever uses the app**, with
+their own token, so the catalog's grants, row filters and column masks always
+apply. An app can narrow what the catalog shows, never widen it. Apps are
+private to their owner until shared with people or groups.
+
+By default everything runs on this machine, against a made-up law firm,
+Harbor & Vale LLP:
+
+- **Sign-in** through its own OpenID Connect provider (port 8790). You choose
+  one of five people, each in different groups.
+- **Data catalog**: a Unity Catalog stand-in (port 8791) that answers Unity
+  Catalog's REST API and SQL Statement Execution API. Its people are
+  PostgreSQL roles, its grants are PostgreSQL grants, its row filters are
+  row-level security, and its masks are applied by a view.
+
+| Person | Groups | What the catalog lets them do |
+|---|---|---|
+| Alex Morgan, managing partner | partners, studio-builders | Every matter; finance; may change matters |
+| Priya Shah, litigation associate | litigation, studio-builders | Litigation matters and their time only; budgets masked |
+| Sam Okafor, finance operations | finance, data-stewards, studio-builders | Every matter; finance; may change invoices and clients |
+| Jordan Lee, head of people | hr, studio-builders | Employees, with pay; may change them |
+| Casey Brooks, corporate paralegal | corporate | Not a builder: uses the apps shared with them |
+
+To use the organisation's own systems instead:
+
+| Setting | What |
+|---|---|
+| `STUDIO_AUTH=oidc` with `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | The organisation's identity provider. `OIDC_GROUPS_CLAIM` names the claim with a person's groups (default `groups`); `STUDIO_BUILDER_GROUPS` names the groups that may build (default `studio-builders`) |
+| `STUDIO_CATALOG=unity` with `DATABRICKS_HOST`, `DATABRICKS_WAREHOUSE_ID` | A Databricks workspace's Unity Catalog, read with the token from the person's sign-in, so the workspace must be the sign-in's issuer, or accept its tokens. Not yet tried against a live workspace |
+| `STUDIO_AUTH=none` | No sign-in and no catalog: one local owner, building apps on their own data |
+| `STUDIO_PUBLIC_URL` | The address people open the studio at (default `http://localhost:5173`); sign-in returns there |
 
 ## What's here
 

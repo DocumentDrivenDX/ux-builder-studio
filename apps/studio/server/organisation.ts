@@ -16,7 +16,7 @@ import { ORG } from "./org/sample-org.js";
 const here = dirname(fileURLToPath(import.meta.url));
 
 export async function startOrganisation() {
-  const mode = (process.env.STUDIO_AUTH ?? "none") as AuthConfig["mode"];
+  const mode = (process.env.STUDIO_AUTH ?? "local") as AuthConfig["mode"];
   const dataDir = join(process.env.STUDIO_DATA_DIR ?? join(here, "..", ".data"), "org");
   const closers: Array<() => Promise<void>> = [];
   const builderGroups = (process.env.STUDIO_BUILDER_GROUPS ?? "studio-builders").split(",").map((s) => s.trim()).filter(Boolean);

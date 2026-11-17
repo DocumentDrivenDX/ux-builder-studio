@@ -16,6 +16,8 @@ import { DiagramsPanel } from "../panels/DiagramsPanel";
 import { BrandPanel } from "../panels/BrandPanel";
 import { BrandProvider, useBrand, useKitTokens } from "../brand/brand";
 import { BUILDER_TABS, PANELS, StudioProvider, useStudio, type BuilderTab, type Panel } from "../studio";
+import { ShareDialog } from "../components/ShareDialog";
+import { navigate } from "../router";
 
 export function AppPage() {
   const { appId } = useParams();
@@ -68,16 +70,22 @@ function Builder() {
   const [variantName, setVariantName] = useState("");
   const [variantNote, setVariantNote] = useState("");
   const [lookError, setLookError] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     api.themes().then((r) => setThemes(r.themes.map((t) => ({ value: t.name, label: t.title }))));
   }, []);
+
+  // Someone who may only use the app uses it; the builder is for those who may change it.
+  const readOnly = !!s.view?.access && !s.view.access.edit;
+  useEffect(() => { if (readOnly) navigate(`/run/${encodeURIComponent(s.appId)}`); }, [readOnly, s.appId]);
 
   const client = useMemo(() => (s.person ? httpClient(s.appId, s.person) : null), [s.appId, s.person?.id]);
   const kitTokens = useKitTokens(s.view?.definition.extensions?.["umf.ux"]?.look?.brandKit);
 
   if (s.error) return <Page><Notice tone="error" title="Could not open this app">{s.error}</Notice></Page>;
   if (!s.view) return <Page><p className="studio-meta">Opening…</p></Page>;
+  if (s.view.access && !s.view.access.edit) return null;
 
   const def = s.view.definition;
   const app = def.extensions["umf.app"];
@@ -127,9 +135,9 @@ function Builder() {
       <div className="builder__toolbar">
         <Cluster gap={3} align="end">
           <Select
-            label="Signed in as"
+            label={s.live ? "Previewing as" : "Signed in as"}
             value={s.person?.id ?? ""}
-            options={s.people.map((p) => ({ value: p.id, label: `${p.name} (${p.roles.join(", ")})` }))}
+            options={s.people.map((p) => ({ value: p.id, label: `${p.name} (${p.roles.join(", ") || "no role"})` }))}
             placeholder={s.people.length ? undefined : "No sample people yet"}
             onChange={(e: any) => s.setPerson(e.target.value)}
             agent={{ id: "preview.person", description: "Which sample person the live preview is signed in as" }}
@@ -155,8 +163,11 @@ function Builder() {
             onChange={(v: string) => setLook({ appearance: v }, `${v} appearance`)}
             agent={{ id: "look.appearance", description: "The app's default appearance: automatic, light or dark" }}
           />
-          <Button variant="secondary" onClick={() => setConfirmReset(true)} agent={{ id: "preview.reset", description: "Reset the preview's data to the app's sample data (asks first)" }}>Reset sample data</Button>
+          {s.view.definition.extensions?.["umf.app"]?.samples?.records?.length ? (
+            <Button variant="secondary" onClick={() => setConfirmReset(true)} agent={{ id: "preview.reset", description: "Reset the preview's data to the app's sample data (asks first)" }}>Reset sample data</Button>
+          ) : null}
         </Cluster>
+        {s.live ? <p className="studio-meta builder__live">Live data from the data catalog, read as you: you see only what the catalog lets you see. Trying a role changes what the app shows, not what the catalog lets you see or change.</p> : null}
         {lookError ? <Notice tone="error" title={lookError} /> : null}
       </div>
       <div className="builder__frame">
@@ -178,7 +189,10 @@ function Builder() {
           title={app.name}
           status={problems ? <StatusPill state="closed">{`${problems} problem${problems === 1 ? "" : "s"}`}</StatusPill> : warnings ? <StatusPill state="limited">{`${warnings} to review`}</StatusPill> : <StatusPill state="live">Valid</StatusPill>}
           description={app.description || app.useCase || "Tell the App Expert what this app is for to start building it."}
-          actions={<Button variant="secondary" onClick={() => { setVariantName(`${app.name} variant`); setVariantOpen(true); }} agent={{ id: "builder.variant", description: "Start creating a variant of this app (asks for its name)" }}>Create variant</Button>}
+          actions={<Cluster gap={2}>
+            {s.view.access?.share ? <Button variant="secondary" onClick={() => setShareOpen(true)} agent={{ id: "builder.share", description: "Open the sharing dialog: who may use or change this app" }}>Share</Button> : null}
+            <Button variant="secondary" onClick={() => { setVariantName(`${app.name} variant`); setVariantOpen(true); }} agent={{ id: "builder.variant", description: "Start creating a variant of this app (asks for its name)" }}>Create variant</Button>
+          </Cluster>}
           secondaryActions={<a className="studio-link" href={`/run/${encodeURIComponent(def.id)}`} target="_blank" rel="noreferrer">Open the app</a>}
         />
       </header>
@@ -190,6 +204,7 @@ function Builder() {
         tabs={BUILDER_TABS.map((t) => ({ id: t.id, label: t.label, panel: t.id === "configuration" ? configuration : preview }))}
         agent={{ id: "builder.tab", description: "Which builder tab is shown: App configuration (the app's panels) or App preview (the live app)" }}
       />
+      <ShareDialog appId={s.appId} appName={app.name} open={shareOpen} onClose={() => setShareOpen(false)} />
       <ConfirmDialog
         open={confirmReset}
         title="Reset the sample data?"

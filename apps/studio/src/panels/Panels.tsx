@@ -57,10 +57,16 @@ export function DataPanel() {
         const derived = list(idx.derived.get(`${rec.ref.module}/${rec.ref.element}`));
         const access = list(idx.app.access).filter((a: any) => a.record.element === rec.id);
         const rels = [...idx.relationships.values()].filter((r: any) => r.source?.element === rec.id) as any[];
+        const source = (idx as any).sourceOf?.(rec.id) as { asset: string; access: "read" | "change"; limit?: number } | null;
         return (
-          <Card key={rec.id} title={rec.title}>
+          <Card key={rec.id} title={rec.title} actions={source ? <StatusPill state={source.access === "change" ? "live" : "neutral"}>{source.access === "change" ? "Catalog: read and change" : "Catalog: read only"}</StatusPill> : undefined}>
             <Stack gap={3}>
               {rec.description ? <p>{rec.description}</p> : null}
+              {source ? (
+                <p className="studio-meta">
+                  Rows live in the data catalog at <a className="studio-link" href={`/catalog?table=${encodeURIComponent(source.asset)}`} target="_blank" rel="noreferrer">{source.asset}</a>, read{source.access === "change" ? " and changed" : ""} as whoever uses the app, under the catalog's grants, row filters and masks (up to {source.limit ?? 5000} rows).
+                </p>
+              ) : null}
               <DataTable
                 caption={`${rec.title} fields`}
                 pageSize={50}

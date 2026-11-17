@@ -53,12 +53,10 @@ export function scaffoldOperations({ kind, chosen, appName, user }: { kind: Kind
     }
   }
 
-  // Roles from the groups the catalog grants through: who may read, and (data management) who may change.
-  const readGroups = [...new Set(recs.map((r) => r.table.access.readVia).filter(Boolean) as string[])];
+  // Roles: everyone the app is shared with reads it ("*"); in data management, the groups the catalog lets change the tables edit.
   const changeGroups = [...new Set(recs.filter((r) => r.access === "change").map((r) => r.table.access.changeVia).filter(Boolean) as string[])];
   const mine = user.groups.filter((g) => g !== "studio-builders");
-  const viewers = readGroups.length ? readGroups : mine;
-  ops.push({ op: "setRoleGroups", args: { id: "member", groups: viewers } });
+  ops.push({ op: "setRoleGroups", args: { id: "member", groups: ["*"] } });
   ops.push({ op: "applyPatch", args: [{ op: "replace", path: "/extensions/umf.app/roles/0/name", value: kind === "reporting" ? "Reader" : "Viewer" }] as never });
   const editing = kind === "data-management" && recs.some((r) => r.access === "change");
   if (editing) ops.push({ op: "addRole", args: { id: "editor", name: "Editor", description: "May change the data the app manages", groups: changeGroups.length ? changeGroups : mine } });
@@ -95,13 +93,13 @@ export function scaffoldOperations({ kind, chosen, appName, user }: { kind: Kind
     screens.push({ op: "putScreen", args: {
       id: `${r.id}-list`.replace(/_/g, "-"),
       title: plural,
-      ...(r.table.comment ? { description: r.table.comment } : {}),
       pattern: "collection",
       ...(writable ? { actions: [{ action: `add-${r.id}`.replace(/_/g, "-"), label: `Add ${one.toLowerCase()}`, emphasis: "primary", roles: ["editor"], inputs: controls(false) }] } : {}),
       regions: [{
         id: `${r.id}-rows`.replace(/_/g, "-"),
         kind: "collection",
         record: { module: "app", element: r.id },
+        ...(r.table.comment ? { description: r.table.comment } : {}),
         columns: shown.map(value),
         search: cols.filter((c) => c.ftype === "text" || c.ftype === "email").slice(0, 3).map((c) => ref(r.id, c.field)),
         rowLink: { screen: `${r.id}-detail`.replace(/_/g, "-"), param: rule({ var: `row.${key}` }) },

@@ -1,5 +1,5 @@
 {
-  "buildId": "8184c32108a0a403",
+  "buildId": "37caef8d7276d2bc",
   "surfaces": [
     {
       "actions": [
@@ -218,6 +218,27 @@
           ],
           "source": "control",
           "title": "Website"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/pages/AppPage.tsx",
+          "description": "Press \"Share\": Open the sharing dialog: who may use or change this app.",
+          "id": "builder.share",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "builder_share",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Share"
         },
         {
           "control": "tabs",
@@ -464,7 +485,7 @@
         {
           "control": "choice",
           "declaredIn": "src/pages/AppPage.tsx",
-          "description": "Choose \"Signed in as\": Which sample person the live preview is signed in as.",
+          "description": "Choose \"Person\": Which sample person the live preview is signed in as.",
           "id": "preview.person",
           "input": {
             "additionalProperties": false,
@@ -488,7 +509,7 @@
             }
           ],
           "source": "control",
-          "title": "Signed in as"
+          "title": "Person"
         },
         {
           "control": "button",
@@ -510,6 +531,110 @@
           ],
           "source": "control",
           "title": "Reset sample data"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/components/ShareDialog.tsx",
+          "description": "Press \"Share\": Share the app with the chosen person or group.",
+          "id": "share.add",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "share_add",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Share"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/components/ShareDialog.tsx",
+          "description": "Choose \"They can\": Whether they may use the app or also change it.",
+          "id": "share.as",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose: users = Use it; editors = Change it (builders only)",
+                "enum": [
+                  "users",
+                  "editors"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "share_as",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "They can"
+        },
+        {
+          "control": "button",
+          "declaredIn": "src/components/ShareDialog.tsx",
+          "description": "Press \"Done\": Close the sharing dialog.",
+          "id": "share.close",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "share_close",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Done"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/components/ShareDialog.tsx",
+          "description": "Choose \"Share with\": A person, group or everyone to share the app with.",
+          "id": "share.who",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "share_who",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/apps/:appId",
+              "title": "App"
+            }
+          ],
+          "source": "control",
+          "title": "Share with"
         },
         {
           "control": "button",
@@ -617,7 +742,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: variant.name (Name), variant.note (What differs), preview.person (Signed in as), look.theme (Theme), look.appearance (Appearance), builder.tab (Builder), brand.url (Website), brand.design-system (Style (design system)), brand.appearance (The app's default appearance), brand.preview-appearance (Show in), brand.kit-name (Kit name), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
+          "description": "What the page shows now. values: share.who (Share with), share.as (They can), builder.tab (Builder), variant.name (Name), variant.note (What differs), preview.person (Person), look.theme (Theme), look.appearance (Appearance), brand.url (Website), brand.design-system (Style (design system)), brand.appearance (The app's default appearance), brand.preview-appearance (Show in), brand.kit-name (Kit name), diagrams.choose (Diagram), diagrams.derived (Show derived values), diagrams.fit (Fit to width).",
           "id": "state",
           "schema": {
             "properties": {
@@ -711,6 +836,125 @@
       "actions": [
         {
           "control": "button",
+          "declaredIn": "src/pages/CatalogPage.tsx",
+          "description": "Press \"Make an app with it\": Start a new app on the table shown, as a reporting app (read only) or a data management app (when the person may change it)",
+          "id": "catalog.new-app",
+          "input": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "name": "catalog_new_app",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/catalog",
+              "title": "Catalog"
+            }
+          ],
+          "source": "control",
+          "title": "Make an app with it"
+        }
+      ],
+      "description": "The Catalog page (/catalog).",
+      "id": "page:CatalogPage",
+      "kind": "page",
+      "observations": [
+        {
+          "description": "What the page shows now.",
+          "id": "state",
+          "schema": {
+            "properties": {
+              "lists": {
+                "description": "The rows each list-row control is showing, by binding id: their ids (keys) and titles",
+                "type": "object"
+              },
+              "shown": {
+                "description": "What the page shows that is not a control, by display: its binding id, heading and facts, each as text by its label; facts that describe one row of a list (a card each) carry the row as item, and a long list of them keeps an index of its rows",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array",
+                "x-rows": {
+                  "index": [
+                    "id"
+                  ],
+                  "ref": "item.key",
+                  "title": "item.title"
+                }
+              },
+              "unavailable": {
+                "description": "Controls that cannot be used right now",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "values": {
+                "description": "Each field's current value, by binding id",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
+          "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+          "id": "problems",
+          "schema": {
+            "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
+            "items": {
+              "properties": {
+                "detail": {
+                  "type": "object"
+                },
+                "hides": {
+                  "description": "Ids of what is not shown because of it",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "description": "What kind of problem it is, in the page’s own vocabulary",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "The words the page shows for it",
+                  "type": "string"
+                },
+                "resolve": {
+                  "description": "The action that resolves it, and the choices it offers",
+                  "properties": {
+                    "action": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        }
+      ],
+      "routes": [
+        "/catalog"
+      ],
+      "title": "Catalog"
+    },
+    {
+      "actions": [
+        {
+          "control": "button",
           "declaredIn": "src/pages/HomePage.tsx",
           "description": "Press \"Create app\": Create the new app from the name, use case and look, and open it (on its Brand and style section when the look comes from a website or logo)",
           "id": "new-app.create",
@@ -729,6 +973,35 @@
           ],
           "source": "control",
           "title": "Create app"
+        },
+        {
+          "control": "choice",
+          "declaredIn": "src/pages/HomePage.tsx",
+          "description": "Choose \"What kind of app?\": What the new app is for: reporting on catalog data (read only), managing catalog data (read and change), or its own data model.",
+          "id": "new-app.kind",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The option to choose",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "type": "object"
+          },
+          "name": "new_app_kind",
+          "reach": [
+            {
+              "kind": "route",
+              "path": "/",
+              "title": "Home"
+            }
+          ],
+          "source": "control",
+          "title": "What kind of app?"
         },
         {
           "control": "choice",
@@ -916,7 +1189,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: new-app.name (App name), new-app.use-case (What should it do?), new-app.look-from (How should it look?), new-app.website (Website), new-app.kit (Brand kit), new-app.theme (Theme).",
+          "description": "What the page shows now. values: new-app.kit (Brand kit), new-app.theme (Theme), new-app.name (App name), new-app.use-case (What should it do?), new-app.kind (What kind of app?), new-app.look-from (How should it look?), new-app.website (Website).",
           "id": "state",
           "schema": {
             "properties": {
@@ -1011,7 +1284,7 @@
         {
           "control": "choice",
           "declaredIn": "src/pages/RunPage.tsx",
-          "description": "Choose \"Signed in as (sample person)\": Which sample person the app is signed in as.",
+          "description": "Choose \"Person\": Which sample person the app is signed in as.",
           "id": "run.person",
           "input": {
             "additionalProperties": false,
@@ -1035,7 +1308,7 @@
             }
           ],
           "source": "control",
-          "title": "Signed in as (sample person)"
+          "title": "Person"
         }
       ],
       "description": "The Run page (/run/:appId).",
@@ -1043,7 +1316,7 @@
       "kind": "page",
       "observations": [
         {
-          "description": "What the page shows now. values: run.person (Signed in as (sample person)).",
+          "description": "What the page shows now. values: run.person (Person).",
           "id": "state",
           "schema": {
             "properties": {
@@ -1863,7 +2136,7 @@
     {
       "actions": [
         {
-          "description": "Create app: Creates a new, empty app from the person's request and opens it in the builder. Use the person's own words for the use case. Give a brand kit if the person named one; for a website, create the app, then use the app room's capture-brand action. (The New app form on the catalog page)",
+          "description": "Create app: Creates a new app from the person's request and opens it in the builder. Use the person's own words for the use case. Give a brand kit if the person named one; for a website, create the app, then use the app room's capture-brand action. Its kind: reporting (dashboards and lists over data-catalog tables, read only), data-management (look up, add and correct rows in catalog tables the person may change), or own-data (its own data model, designed here; the default). For reporting and data-management, give the catalog tables (see the dataCatalog observation, which lists only what the person may read, and what they may change): the studio makes a first version from them at once, read as the person. (The New app form on the catalog page)",
           "effect": "edit",
           "id": "catalog/action/create-app",
           "input": {
@@ -1887,11 +2160,48 @@
                 "maxLength": 300,
                 "type": "string"
               },
+              "kind": {
+                "description": "What the app is for (default own-data)",
+                "enum": [
+                  "reporting",
+                  "data-management",
+                  "own-data"
+                ],
+                "type": "string"
+              },
               "name": {
                 "description": "Short app name, e.g. Time tracker",
                 "maxLength": 80,
                 "minLength": 1,
                 "type": "string"
+              },
+              "sources": {
+                "description": "For reporting or data-management: the catalog tables, by full name, and whether the app changes each (change only where the dataCatalog observation says the person may)",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "access": {
+                      "description": "Default read",
+                      "enum": [
+                        "read",
+                        "change"
+                      ],
+                      "type": "string"
+                    },
+                    "asset": {
+                      "description": "catalog.schema.table",
+                      "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "asset"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 12,
+                "minItems": 1,
+                "type": "array"
               },
               "theme": {
                 "description": "Optional starting built-in theme (default plain)",
@@ -2013,6 +2323,29 @@
           }
         },
         {
+          "description": "The organisation's data catalog as the signed-in person sees it: who they are, and every table they may read, with what they may do with it",
+          "id": "dataCatalog",
+          "schema": {
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "person": {
+                "description": "\"<name> (<groups>)\"; builder or not",
+                "type": "string"
+              },
+              "tables": {
+                "description": "Each table as \"<catalog.schema.table>: <comment> [read only | read and change]\"",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        },
+        {
           "description": "What is wrong that a person would see: what the page cannot show, load or do, as its banners and messages say it. Empty when nothing is wrong.",
           "id": "problems",
           "schema": {
@@ -2081,7 +2414,7 @@
                 "type": "object"
               },
               "path": {
-                "description": "The page’s address, with an id in place of each :parameter (or the route as listed, with params). The pages: / (Home), /apps/:appId (App), /run/:appId (Run).",
+                "description": "The page’s address, with an id in place of each :parameter (or the route as listed, with params). The pages: / (Home), /apps/:appId (App), /catalog (Catalog), /run/:appId (Run).",
                 "type": "string"
               }
             },
@@ -2163,6 +2496,7 @@
       "routes": [
         "/",
         "/apps/:appId",
+        "/catalog",
         "/run/:appId"
       ],
       "title": "Pages"

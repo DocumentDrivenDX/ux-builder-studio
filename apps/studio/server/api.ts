@@ -168,7 +168,8 @@ export function createApi({ agent, auth = NO_AUTH }: { agent: AgentRoutes; auth?
     const idx = indexDefinition(doc);
     if (idx.sources.size) {
       const u = userOf(req);
-      const roles: string[] = (doc.extensions?.["umf.app"]?.roles ?? []).filter((r: any) => (r.groups ?? []).some((g: string) => u.groups.includes(g))).map((r: any) => r.id);
+      // "*" is everyone the app is shared with.
+      const roles: string[] = (doc.extensions?.["umf.app"]?.roles ?? []).filter((r: any) => (r.groups ?? []).some((g: string) => g === "*" || u.groups.includes(g))).map((r: any) => r.id);
       const tryRole = typeof who === "string" && who.startsWith("role:") ? who.slice(5) : null;
       const a = accessOf(doc.id);
       const asRole = tryRole && canEdit(u, a) && (doc.extensions?.["umf.app"]?.roles ?? []).some((r: any) => r.id === tryRole) ? [tryRole] : null;

@@ -7,6 +7,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Identity, Location } from "@ux-builder/app-runtime/contract";
 import { api, onChange, type AppView } from "./api";
 import { navigate } from "./router";
+import { rolesFor, useSession, type Me } from "./session";
+
+/* Who the preview runs as. On sample data: the app's sample people. On the
+   organisation's data (an app with catalog sources): the signed-in person,
+   with the roles their groups give them, or trying one role at a time; the
+   catalog answers as them either way, so nobody sees anyone else's data. */
+export function previewPeople(view: AppView | null, me: Me | null): Identity[] {
+  const app = view?.definition.extensions?.["umf.app"];
+  if (!app) return [];
+  if (!(app.sources ?? []).length) return app.samples?.identities ?? [];
+  if (!me) return [];
+  const roles: Array<{ id: string; name: string; groups?: string[] }> = app.roles ?? [];
+  const mine = rolesFor(me, roles);
+  const you: Identity = { id: "me", name: `${me.name} (you)`, email: me.email, roles: mine.length || !view?.access?.edit ? mine : roles.map((r) => r.id), attributes: { groups: me.groups } };
+  const tries: Identity[] = view?.access?.edit ? roles.map((r) => ({ id: `role:${r.id}`, name: `You, as ${r.name}`, email: me.email, roles: [r.id], attributes: { groups: me.groups } })) : [];
+  return [you, ...tries];
+}
 
 export type Panel = "overview" | "brand" | "data" | "screens" | "actions" | "diagrams" | "rules" | "versions" | "deployment";
 export const PANELS: Array<{ id: Panel; label: string }> = [
@@ -51,6 +68,8 @@ type Studio = {
   reset(): Promise<void>;
   reload(): Promise<void>;
   previewKey: number;
+  /** The app reads the organisation's data catalog (as whoever uses it). */
+  live: boolean;
 };
 
 const StudioContext = createContext<Studio | null>(null);
@@ -94,12 +113,14 @@ export function StudioProvider({ appId, children }: { appId: string; children: R
     });
   }, [appId, reload]);
 
-  const people: Identity[] = view?.definition.extensions?.["umf.app"]?.samples?.identities ?? [];
+  const { me } = useSession();
+  const live = !!(view?.definition.extensions?.["umf.app"]?.sources ?? []).length;
+  const people: Identity[] = useMemo(() => previewPeople(view, me), [view, me]);
   const person = people.find((p) => p.id === personId) ?? people[0] ?? null;
   const appearance = view?.definition.extensions?.["umf.ux"]?.look?.appearance ?? "system";
 
   const value = useMemo<Studio>(() => ({
-    appId, view, error, tab, setTab, panel, setPanel, people, person, previewKey,
+    appId, view, error, tab, setTab, panel, setPanel, people, person, previewKey, live,
     setPerson: (id) => { setPersonId(id); setLocation(undefined); },
     location, setLocation, appearance,
     reload,
@@ -139,7 +160,7 @@ export function StudioProvider({ appId, children }: { appId: string; children: R
       await api.reset(appId);
       setPreviewKey((k) => k + 1);
     },
-  }), [appId, view, error, tab, panel, setPanel, people, person, location, appearance, reload, previewKey]);
+  }), [appId, view, error, tab, panel, setPanel, people, person, location, appearance, reload, previewKey, live]);
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;
 }

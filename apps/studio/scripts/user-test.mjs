@@ -31,8 +31,8 @@ mkdirSync(SHOTS, { recursive: true });
    so it can run beside a studio already open on the usual ones. */
 const REUSE = args.includes("--reuse");
 const PORTS = REUSE
-  ? { web: 5173, api: 8787, realtime: 3331, worker: 8091, redis: 6379 }
-  : { web: 5273, api: 8887, realtime: 3431, worker: 8191, redis: 6479 };
+  ? { web: 5173, api: 8787, realtime: 3331, worker: 8091, redis: 6379, idp: 8790, catalog: 8791 }
+  : { web: 5273, api: 8887, realtime: 3431, worker: 8191, redis: 6479, idp: 8990, catalog: 8991 };
 const WEB = `http://localhost:${PORTS.web}`;
 const API = `http://127.0.0.1:${PORTS.api}`;
 
@@ -45,10 +45,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /* ---------- the studio under test ---------- */
 let server = null;
 if (!REUSE) {
-  for (const port of [PORTS.web, PORTS.api, PORTS.realtime, PORTS.worker, PORTS.redis]) if (await listening(port)) throw new Error(`Port ${port} is in use by an earlier test run: stop it first`);
+  for (const port of [PORTS.web, PORTS.api, PORTS.realtime, PORTS.worker, PORTS.redis, PORTS.idp, PORTS.catalog]) if (await listening(port)) throw new Error(`Port ${port} is in use by an earlier test run: stop it first`);
   const env = {
     ...process.env, STUDIO_DATA_DIR: join(OUT, "data"),
     STUDIO_WEB_PORT: String(PORTS.web), STUDIO_API_PORT: String(PORTS.api), STUDIO_REALTIME_PORT: String(PORTS.realtime), STUDIO_WORKER_PORT: String(PORTS.worker), REDIS_PORT: String(PORTS.redis),
+    // People sign in through the sample organisation's identity provider, and apps can read its data catalog.
+    STUDIO_AUTH: "local", STUDIO_IDP_PORT: String(PORTS.idp), STUDIO_CATALOG_PORT: String(PORTS.catalog), STUDIO_PUBLIC_URL: WEB,
     ...(args.includes("--scripted") ? { STUDIO_MODEL: "scripted" } : {}),
     STUDIO_WEB_ORIGINS: `http://localhost:${PORTS.web},http://127.0.0.1:${PORTS.web}`,
   };
@@ -65,10 +67,10 @@ if (!REUSE) {
   }
 }
 const health = await fetch(`${API}/api/health`).then((r) => r.json());
-const session = await fetch(`${API}/api/agent/session`).then((r) => r.json()).catch(() => null);
-/* With a real model the app is the model's own design, so the checks are about
-   outcomes (valid, complete, usable by every person), not time-tracker-2's numbers. */
-const LIVE = !!session && session.model !== "scripted";
+/* Known once someone has signed in. With a real model the app is the model's own design, so
+   the checks are about outcomes (valid, complete, usable by every person), not time-tracker-2's numbers. */
+let session = null;
+let LIVE = false;
 let finalReply = "";
 
 /* A made-up firm's website (fixtures/sites), served here, for the brand step. */
@@ -130,13 +132,45 @@ const rowMenu = async (rowText, item) => {
   await page.getByRole("menuitem", { name: item }).click();
   await wait(800);
 };
+/* The studio's API, as the person signed in to the browser (its session cookie). */
+const apiJson = (path) => page.request.get(`${WEB}${path}`).then((r) => r.json());
+/* Sign in to the studio as one of the sample organisation's people, through its identity provider. */
+const logIn = async (who, { atChooser = false } = {}) => {
+  if (!atChooser) {
+    const button = page.getByRole("button", { name: "Sign in", exact: true });
+    await button.waitFor({ timeout: 30000 });
+    await button.click();
+  }
+  await page.getByText("Sign in to Harbor & Vale LLP").waitFor({ timeout: 30000 });
+  await page.getByRole("radio", { name: new RegExp(who) }).check();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL((u) => u.port === String(PORTS.web), { timeout: 30000 });
+  await page.locator(".studio__me-name", { hasText: who }).waitFor({ timeout: 30000 });
+};
+const switchTo = async (who) => {
+  // Switching signs out of the studio and goes straight to the organisation's sign-in.
+  await page.getByRole("button", { name: "Switch person" }).click();
+  await logIn(who, { atChooser: true });
+};
 const toast = async () => (await page.locator(".piq-toast, [role=status]").allInnerTexts()).join(" | ");
 
 let appId = null;
 
-await step("Open the studio: an empty catalog", async ({ check, shot }) => {
+await step("Sign in as yourself, then an empty catalog", async ({ check, shot }) => {
   await page.goto(WEB, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Sign in to UX Builder Studio" }).waitFor({ timeout: 60000 }).catch(() => {});
+  check(await page.getByRole("heading", { name: "Sign in to UX Builder Studio" }).isVisible(), "the studio asks who you are first");
+  await shot("sign-in");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByText("Sign in to Harbor & Vale LLP").waitFor({ timeout: 30000 }).catch(() => {});
+  check(await page.getByText("Sign in to Harbor & Vale LLP").isVisible(), "the organisation's sign-in page shows its people");
+  await shot("organisation-sign-in");
+  await page.goBack();
+  await logIn("Alex Morgan");
   await wait(1500);
+  session = await apiJson("/api/agent/session").catch(() => null);
+  LIVE = !!session && session.model !== "scripted";
+  check(await page.locator(".studio__me-name").innerText().then((t) => t.includes("Alex Morgan") && t.includes("Builder")), "the top bar says who is signed in");
   check(await page.getByRole("heading", { name: "Your apps" }).isVisible(), "the catalog page shows");
   check(await page.getByText("No apps yet").isVisible(), "there are no apps yet");
   check(await page.getByRole("textbox", { name: COMPOSER }).isVisible(), "the assistant's composer is ready");
@@ -177,7 +211,7 @@ await step("Ask the assistant for the app, in plain language", async ({ check, s
 let view = null;
 if (LIVE) {
   await step("UMF validated the app the model built", async ({ check, shot }) => {
-    view = await fetch(`${API}/api/apps/${encodeURIComponent(appId)}`).then((r) => r.json());
+    view = await apiJson(`/api/apps/${encodeURIComponent(appId)}`);
     writeFileSync(join(OUT, "app.definition.json"), JSON.stringify(view.definition, null, 2));
     check(view.verdict.valid && view.verdict.renderable, "the current definition is valid UMF and renders");
     check(view.history.length >= 2 && view.history.slice(1).some((h) => h.by === "assistant"), `the assistant saved versions (${view.history.length - 1})`);
@@ -220,7 +254,7 @@ if (LIVE) {
 }
 if (!LIVE) {
 await step("UMF validated every version the assistant saved", async ({ check, shot }) => {
-  view = await fetch(`${API}/api/apps/${encodeURIComponent(appId)}`).then((r) => r.json());
+  view = await apiJson(`/api/apps/${encodeURIComponent(appId)}`);
   check(view.verdict.valid && view.verdict.renderable, "the current definition is valid UMF and renders");
   check(view.verdict.errors.length === 0, "no validation problems");
   check(view.history.length === 7, `seven versions (created + six batches), found ${view.history.length}`);
@@ -559,11 +593,11 @@ await step("Start a new app with its look decided up front: a red brand's websit
   await options.nth(0).getByRole("button", { name: "Use this option" }).click();
   await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
   // Nothing is built yet (no screens or sample people), but the app already wears its brand.
-  const def = await fetch(`${API}/api/apps/app.advisory-matters`).then((r) => r.json());
+  const def = await apiJson(`/api/apps/app.advisory-matters`);
   check(def.definition.extensions["umf.ux"].look.brandKit === "crimson-co", "the new app wears the Crimson & Co. kit before anything else is built");
   await showTab("App preview");
   check((await page.locator(".builder__kit").innerText()).includes("Crimson & Co."), "the preview toolbar names the kit");
-  const tokens = await fetch(`${API}/api/brand/kits/crimson-co/tokens`).then((r) => r.json());
+  const tokens = await apiJson(`/api/brand/kits/crimson-co/tokens`);
   const structure = tokens.light["piq-color-structure"];
   const { h, C } = await page.evaluate((hex) => {
     const lin = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
@@ -577,6 +611,72 @@ await step("Start a new app with its look decided up front: a red brand's websit
   await shot("new-app-preview");
 });
 }
+
+/* ---------- apps on the organisation's data ---------- */
+
+await step("The data catalog: Alex sees what he may read, and what he may change", async ({ check, shot }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(WEB, { waitUntil: "networkidle" });
+  await page.getByRole("navigation", { name: "Studio" }).getByRole("link", { name: "Data catalog" }).click();
+  await page.getByRole("button", { name: /^matters/ }).click();
+  await page.getByText("Rows are filtered for you").waitFor({ timeout: 30000 });
+  await page.getByText(/the first \d+ rows, as you see them/).waitFor({ timeout: 30000 }).catch(() => {});
+  const body = (await page.locator(".studio__main").innerText()).replace(/\s+/g, " ");
+  check(/employees/.test(body) && /invoices/.test(body), "a partner sees the firm's people and finance tables");
+  check(/Read and change through partners/.test(body), "he may change matters, through the partners group");
+  check(/Budgets are shown to partners and finance only/.test(body), "the masked column says who sees it");
+  check(/the first \d+ rows, as you see them/.test(body), "a first look at the rows, as he sees them");
+  await shot("data-catalog");
+});
+
+let reportId = null;
+await step("A reporting app from the catalog: a dashboard at once, read as the person", async ({ check, shot }) => {
+  await page.getByRole("button", { name: "Make an app with it" }).click();
+  await page.getByLabel("App name").waitFor({ timeout: 30000 });
+  await page.getByLabel("App name").fill("Matter dashboard");
+  check((await page.getByRole("radiogroup", { name: "What kind of app?" }).getByRole("radio", { name: "Managing our data" }).getAttribute("aria-checked")) === "true", "a table he may change suggests a data management app");
+  await page.getByRole("radiogroup", { name: "What kind of app?" }).getByRole("radio", { name: "Reporting on our data" }).click();
+  await page.locator(".studio-pick__table", { hasText: "practice.clients" }).getByRole("checkbox").check();
+  check(await page.locator(".studio-pick__table", { hasText: "practice.matters" }).getByRole("checkbox").isChecked(), "the table he came from is chosen");
+  await page.getByRole("radiogroup", { name: "How should it look?" }).getByRole("radio", { name: "A built-in theme" }).click();
+  await shot("new-reporting-app");
+  await page.getByRole("button", { name: "Create app", exact: true }).click();
+  await page.waitForURL(/\/apps\/app\.matter-dashboard/, { timeout: 60000 });
+  reportId = "app.matter-dashboard";
+  await showTab("App preview");
+  check((await page.getByLabel("Previewing as").locator("option").allInnerTexts()).some((o) => /Alex Morgan \(you\)/.test(o)), "the preview runs as him, not as sample people");
+  await preview.locator(".app-rt-chart__svg").first().waitFor({ timeout: 60000 });
+  await settle();
+  check(await preview.locator(".app-rt-chart__svg").count() >= 2, "the dashboard has charts: budget by month and matters by practice group");
+  check(/Matters/.test(await text()), "the headline numbers count his matters");
+  await shot("reporting-dashboard");
+  await go("Matters", "Northwind Logistics");
+  check(/corporate/i.test(await text()) && /litigation/i.test(await text()), "a partner sees every practice group's matters");
+  await shot("reporting-matters-as-partner");
+});
+
+await step("Alex shares it with the litigation group; Priya sees only litigation, with budgets masked", async ({ check, shot }) => {
+  await showTab("App configuration");
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  await page.getByLabel("Share with").selectOption("group:litigation");
+  await page.getByRole("button", { name: "Share", exact: true }).last().click();
+  await page.locator(".studio-share__list", { hasText: "Litigation (group)" }).waitFor({ timeout: 15000 });
+  await shot("share-dialog");
+  await page.getByRole("button", { name: "Done" }).click();
+  await switchTo("Priya Shah");
+  const card = page.locator(".piq-card", { hasText: "Matter dashboard" });
+  await card.waitFor({ timeout: 30000 });
+  check(/Shared with you by alex.morgan@harborvale.example, to use/.test(await card.innerText()), "the app shows as shared with her, to use");
+  await card.getByRole("button", { name: "Use" }).click();
+  await page.waitForURL(/\/run\/app\.matter-dashboard/, { timeout: 30000 });
+  await page.locator(".app-rt-chart__svg").first().waitFor({ timeout: 60000 });
+  await shot("reporting-as-priya");
+  const view = await apiJson(`/api/apps/${encodeURIComponent(reportId)}/runtime/snapshot?as=me`);
+  check(view.records.matters.length > 0 && view.records.matters.every((m) => m.practice_group === "litigation"), "she sees only her practice group's matters");
+  check(view.records.matters.every((m) => m.budget === null), "budgets are masked for her");
+  const edit = await page.request.post(`${WEB}/api/apps/${encodeURIComponent(reportId)}/operations`, { data: { operations: [{ op: "setShell", args: { title: "Mine" } }] } });
+  check(edit.status() === 403, "she may use the app, not change it");
+});
 await browser.close();
 const errors = consoleLog.filter((l) => l.startsWith("[error]") || l.startsWith("[pageerror]"));
 writeFileSync(join(OUT, "console.txt"), consoleLog.join("\n"));

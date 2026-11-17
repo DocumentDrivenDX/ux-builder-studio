@@ -4,7 +4,8 @@ import Ajv from "ajv";
 import { catalogData, type RoomResult } from "@ouispec/bindings";
 import { useRoomRegistration } from "@ouispec/bindings/react";
 import { catalogRoom, type CatalogCtx } from "./catalog";
-import { api, type BrandKit, type CatalogEntry } from "../../api";
+import { api, type BrandKit, type CatalogEntry, type CatalogTree } from "../../api";
+import { useSession } from "../../session";
 import { navigate } from "../../router";
 import { setStudioAppearance, useStudioAppearance } from "../../appearance";
 
@@ -14,7 +15,11 @@ const validators = Object.fromEntries(catalogRoom.actions.map((a) => [a.id, ajv.
 
 export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
   const [kits, setKits] = useState<BrandKit[]>([]);
+  const [tree, setTree] = useState<CatalogTree | null>(null);
+  const [catalogOn, setCatalogOn] = useState(false);
+  const { me } = useSession();
   useEffect(() => { api.brandKits().then((r) => setKits(r.kits)).catch(() => {}); }, [apps]);
+  useEffect(() => { api.catalog().then((c) => { setCatalogOn(c.available); if (c.available) api.catalogTree().then((r) => setTree(r.tree)).catch(() => {}); }).catch(() => {}); }, []);
   const look = useStudioAppearance();
   const ctx: CatalogCtx = useMemo(() => ({
     setStudioAppearance: (input) => setStudioAppearance(look, input.appearance),
@@ -44,7 +49,14 @@ export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
   };
   useRoomRegistration(DATA, {
     run,
-    observations: { catalog: { count: apps.length, apps: apps.map((a) => `${a.id}: ${a.name} (v${a.version})`), kits: kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`) } },
+    observations: {
+      catalog: { count: apps.length, apps: apps.map((a) => `${a.id}: ${a.name} (v${a.version})`), kits: kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`) },
+      dataCatalog: {
+        available: catalogOn,
+        person: me ? `${me.name} (${me.groups.join(", ")}); ${me.builder ? "a studio builder" : "not a builder: may only use apps shared with them"}` : "nobody signed in",
+        tables: (tree ?? []).flatMap((c) => c.schemas.flatMap((s) => s.tables.map((t) => `${t.fullName}: ${t.comment ?? ""} [${t.access.change ? "read and change" : "read only"}]`))),
+      },
+    },
     problems: [],
   } as any);
   return null;
