@@ -3,6 +3,7 @@
    DTCG export). Everything runs locally; the only network request is the
    browser opening the website. */
 
+import { readFileSync } from "node:fs";
 import type express from "express";
 import { type NextFunction, type Request, type Response } from "express";
 import { AppError, listApps } from "../apps.js";
@@ -88,7 +89,7 @@ export function mountBrand(app: express.Express) {
     try {
       res.status(201).json(await captureBrand(String(url ?? ""), designSystem));
     } catch (e) {
-      if (e instanceof CaptureError) throw new AppError(e.code === "SITE_UNREACHABLE" ? 502 : e.code === "BROWSER_UNAVAILABLE" ? 503 : 400, e.code, e.message);
+      if (e instanceof CaptureError) throw new AppError(e.code === "SITE_UNREACHABLE" || e.code === "SITE_BLOCKED" ? 502 : e.code === "BROWSER_UNAVAILABLE" ? 503 : 400, e.code, e.message);
       throw e;
     }
   }));
@@ -103,7 +104,8 @@ export function mountBrand(app: express.Express) {
       if (!file) return res.status(404).end();
       // A person's SVG is shown as an image only: nothing in it may run, even opened directly.
       if (name.endsWith(".svg")) res.set("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:");
-      res.type(name.endsWith(".svg") ? "image/svg+xml" : "png").set("cache-control", "private, max-age=31536000, immutable").sendFile(file);
+      // Sent from memory, not sendFile: the data folder (.data) is a dot-folder, which sendFile refuses.
+      res.type(name.endsWith(".svg") ? "image/svg+xml" : "png").set("cache-control", "private, max-age=31536000, immutable").send(readFileSync(file));
     });
   }
   app.post("/api/brand/captures/logo", wrap(async (req, res) => {

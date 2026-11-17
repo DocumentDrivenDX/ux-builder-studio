@@ -13,12 +13,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hexToOklch } from "@ux-builder/engine/node";
 
-process.env.STUDIO_DATA_DIR = mkdtempSync(join(tmpdir(), "studio-brand-"));
+// Inside a dot-folder, as the studio's own .data is.
+process.env.STUDIO_DATA_DIR = join(mkdtempSync(join(tmpdir(), "studio-brand-")), ".data");
 const { createApi } = await import("../server/api.ts");
 const { isRed } = await import("../server/brand/checks.ts");
 
+const DENIED = "<html><head><title>Access Denied</title></head><body><h1>Access Denied</h1>You don't have permission to access this server.<p>Reference #18.4f2a1</p></body></html>";
 const sites: Server = createServer((req, res) => {
-  const site = String(req.url).split("/")[1];
+  let site = String(req.url).split("/")[1];
+  // A site that refuses every automated browser, and one that refuses only a browser calling itself headless.
+  if (site === "blocked" || (site === "no-headless" && /HeadlessChrome/.test(String(req.headers["user-agent"])))) { res.statusCode = 403; res.setHeader("content-type", "text/html"); return res.end(DENIED); }
+  if (site === "no-headless") site = "evergreen";
   try { res.setHeader("content-type", "text/html"); res.end(readFileSync(join(import.meta.dirname, "..", "fixtures", "sites", site, "index.html"))); }
   catch { res.statusCode = 404; res.end(); }
 });
@@ -173,6 +178,17 @@ test("an app wears a kit; unknown themes and kits are refused; a kit in use cann
   const off = await ops({ brandKit: "" });
   assert.equal(off.body.definition.extensions["umf.ux"].look.brandKit, undefined);
   assert.equal((await call("DELETE", `/api/brand/kits/${kit.id}`)).status, 200);
+});
+
+test("a site that turns away headless browsers is still read; one that refuses every browser is reported, not analysed", async () => {
+  const ok = await call("POST", "/api/brand/captures", { url: `${SITES}/no-headless/` });
+  assert.equal(ok.status, 201, JSON.stringify(ok.body));
+  assert.equal(ok.body.analysis.colours[0].hex, "#0b6e4f");
+  const refused = await call("POST", "/api/brand/captures", { url: `${SITES}/blocked/` });
+  assert.equal(refused.status, 502);
+  assert.equal(refused.body.code, "SITE_BLOCKED");
+  assert.match(refused.body.message, /turned the studio's browser away \(.*403.*Access Denied/);
+  assert.match(refused.body.message, /logo file/);
 });
 
 test("a website that cannot be reached is a plain error", async () => {
