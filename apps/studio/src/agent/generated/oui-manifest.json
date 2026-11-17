@@ -1,5 +1,5 @@
 {
-  "buildId": "37caef8d7276d2bc",
+  "buildId": "e5d8272235ff3b34",
   "surfaces": [
     {
       "actions": [
@@ -977,7 +977,7 @@
         {
           "control": "choice",
           "declaredIn": "src/pages/HomePage.tsx",
-          "description": "Choose \"What kind of app?\": What the new app is for: reporting on catalog data (read only), managing catalog data (read and change), or its own data model.",
+          "description": "Choose \"What kind of app?\": What the new app is for: reporting on catalog data (read only), managing catalog data (read and change), or its own data model. It is in the Choice Picker.",
           "id": "new-app.kind",
           "input": {
             "additionalProperties": false,
@@ -998,6 +998,11 @@
               "kind": "route",
               "path": "/",
               "title": "Home"
+            },
+            {
+              "kind": "panel",
+              "openedBy": [],
+              "title": "Choice Picker"
             }
           ],
           "source": "control",

@@ -38,7 +38,7 @@ export function CatalogPage() {
     api.catalogRows(selected, 20).then(setRows, () => setRows({ columns: [], rows: [] }));
   }, [selected]);
 
-  if (info && !info.available) {
+  if (me?.solo || (info && !info.available)) {
     return <Page><Stack gap={4}><PageHeader title="Data catalog" /><Notice tone="info" title="No data catalog is connected">Apps here keep their own data. Connect the organisation's Unity Catalog to build apps on its data.</Notice></Stack></Page>;
   }
   const masked = table?.columns.filter((c) => c.mask) ?? [];

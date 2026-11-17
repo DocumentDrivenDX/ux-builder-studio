@@ -158,8 +158,9 @@ let appId = null;
 
 await step("Sign in as yourself, then an empty catalog", async ({ check, shot }) => {
   await page.goto(WEB, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Sign in to UX Builder Studio" }).waitFor({ timeout: 60000 }).catch(() => {});
-  check(await page.getByRole("heading", { name: "Sign in to UX Builder Studio" }).isVisible(), "the studio asks who you are first");
+  await page.getByRole("heading", { name: "Build on your own" }).waitFor({ timeout: 60000 }).catch(() => {});
+  check(await page.getByRole("heading", { name: "Build on your own" }).isVisible(), "the studio offers building on your own");
+  check(await page.getByRole("heading", { name: "Or sign in to an organisation" }).isVisible(), "or signing in to an organisation, for apps on its data");
   await shot("sign-in");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByText("Sign in to Harbor & Vale LLP").waitFor({ timeout: 30000 }).catch(() => {});
@@ -676,6 +677,18 @@ await step("Alex shares it with the litigation group; Priya sees only litigation
   check(view.records.matters.every((m) => m.budget === null), "budgets are masked for her");
   const edit = await page.request.post(`${WEB}/api/apps/${encodeURIComponent(reportId)}/operations`, { data: { operations: [{ op: "setShell", args: { title: "Mine" } }] } });
   check(edit.status() === 403, "she may use the app, not change it");
+});
+
+await step("On your own: the whole builder, with no organisation and no data catalog", async ({ check, shot }) => {
+  await page.goto(WEB, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Start building" }).click();
+  await page.locator(".studio__me-name", { hasText: "On your own" }).waitFor({ timeout: 30000 });
+  check(!(await page.getByRole("navigation", { name: "Studio" }).getByRole("link", { name: "Data catalog" }).count()), "no data catalog without an organisation");
+  check(!(await page.getByRole("radiogroup", { name: "What kind of app?" }).count()), "new apps have their own data");
+  check(await page.getByRole("button", { name: "Create app", exact: true }).isVisible() && await page.getByRole("textbox", { name: COMPOSER }).isVisible(), "the New app form and the App Expert are there");
+  check(!/Matter dashboard/.test(await page.locator(".studio__main").innerText()), "the organisation's apps stay with the organisation");
+  await shot("on-your-own");
 });
 await browser.close();
 const errors = consoleLog.filter((l) => l.startsWith("[error]") || l.startsWith("[pageerror]"));

@@ -145,6 +145,22 @@ test("a data management app: the people who may change the table change it, in t
   assert.match(tryIt.body.message, /may not change client in the data catalog/i);
 });
 
+test("on this machine the studio can also be used on its own: every builder feature, apps on their own data, no catalog", async () => {
+  const r = await fetch(`${API}/api/auth/solo`, { method: "POST" });
+  assert.equal(r.status, 200);
+  const cookie = r.headers.getSetCookie()[0].split(";")[0];
+  const call = async (method: string, path: string, body?: unknown) => {
+    const x = await fetch(API + path, { method, headers: { cookie, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    return { status: x.status, body: (await x.json().catch(() => null)) as any };
+  };
+  const me = (await call("GET", "/api/me")).body;
+  assert.equal(me.user.solo, true);
+  assert.equal(me.catalog, false);
+  assert.equal((await call("POST", "/api/apps", { name: "My own tracker" })).status, 201);
+  assert.equal((await call("GET", "/api/catalog/tree")).status, 401);
+  assert.deepEqual((await call("GET", "/api/apps")).body.apps.map((a: any) => a.name), ["My own tracker"]);
+});
+
 test("each person's conversations and apps are their own", async () => {
   const mine = (await priya("GET", "/api/apps")).body.apps.map((a: any) => a.name).sort();
   assert.deepEqual(mine, ["Client records", "Matter dashboard"]);

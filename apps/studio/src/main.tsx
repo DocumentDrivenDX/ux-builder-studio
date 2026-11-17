@@ -39,6 +39,14 @@ function AppearanceToggle() {
 function Me() {
   const { me, auth, signOut, signIn } = useSession();
   if (!me || auth?.mode === "none") return null;
+  if (me.solo) {
+    return (
+      <div className="studio__me">
+        <span className="studio__me-name">On your own<span className="studio-meta">Apps with their own data</span></span>
+        <Button variant="text" onClick={async () => { await signOut(); signIn(); }} agent={{ nonAgent: "signing in is the person's own step" }}>Sign in to an organisation</Button>
+      </div>
+    );
+  }
   return (
     <div className="studio__me">
       <span className="studio__me-name" title={me.groups.length ? `Groups: ${me.groups.join(", ")}` : undefined}>
@@ -54,13 +62,14 @@ function Me() {
 }
 
 function Nav({ path }: { path: string }) {
+  const { catalog } = useSession();
   const link = (to: string, label: string, current: boolean) => (
     <a className="studio__nav-link" href={to} aria-current={current ? "page" : undefined} onClick={(e) => { e.preventDefault(); navigate(to); }}>{label}</a>
   );
   return (
     <nav className="studio__nav" aria-label="Studio">
       {link("/", "Apps", path === "/" || path.startsWith("/apps/"))}
-      {link("/catalog", "Data catalog", path.startsWith("/catalog"))}
+      {catalog ? link("/catalog", "Data catalog", path.startsWith("/catalog")) : null}
     </nav>
   );
 }

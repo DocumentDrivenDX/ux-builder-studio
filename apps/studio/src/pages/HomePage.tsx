@@ -17,7 +17,7 @@ const KINDS: Array<{ value: AppKind; label: string; about: string }> = [
 ];
 
 export function HomePage() {
-  const { me } = useSession();
+  const { me, catalog: canReadCatalog } = useSession();
   const query = new URLSearchParams(window.location.search);
   const [apps, setApps] = useState<CatalogEntry[] | null>(null);
   // What the app is for, and (for apps on the organisation's data) which tables.
@@ -42,7 +42,7 @@ export function HomePage() {
     load();
     api.brandKits().then((r) => { setKits(r.kits); setKit((k) => k || r.kits[0]?.id || ""); }).catch(() => {});
     api.themes().then((r) => setThemes(r.themes.map((t) => ({ value: t.name, label: t.title })))).catch(() => {});
-    api.catalog().then((c) => { setCatalog(c); if (c.available) api.catalogTree().then((r) => setTree(r.tree)).catch(() => setTree([])); }).catch(() => {});
+    api.catalog().then((c) => { setCatalog(c); if (c.available && canReadCatalog) api.catalogTree().then((r) => setTree(r.tree)).catch(() => setTree([])); }).catch(() => {});
     if (query.get("kind")) window.history.replaceState(null, "", "/");
     return onChange(() => load());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,7 +94,7 @@ export function HomePage() {
           <Stack gap={4}>
             <TextField label="App name" value={name} onChange={(e: any) => setName(e.target.value)} placeholder="Time tracker" agent={{ id: "new-app.name", description: "The new app's name" }} />
             <TextArea label="What should it do?" hint="Who uses it, and what they need to get done" value={useCase} onChange={(e: any) => setUseCase(e.target.value)} rows={3} agent={{ id: "new-app.use-case", description: "The new app's use case, in the person's words" }} />
-            {catalog?.available ? (
+            {catalog?.available && canReadCatalog ? (
               <div className="studio-new-look">
                 <ChoicePicker label="What kind of app?" value={kind} onChange={(v: string) => setKind(v as AppKind)}
                   options={KINDS.map((k) => ({ value: k.value, label: k.label }))}

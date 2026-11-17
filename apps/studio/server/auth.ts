@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import type { NextFunction, Request, Response, Express } from "express";
 import * as oidc from "openid-client";
 
-export type User = { id: string; name: string; email: string; groups: string[]; builder: boolean };
+export type User = { id: string; name: string; email: string; groups: string[]; builder: boolean; solo?: boolean };
 type Session = { id: string; user: User; catalogToken: string | null; expiresAt: number; createdAt: number };
 type Pending = { verifier: string; returnTo: string; at: number };
 
@@ -40,7 +40,7 @@ export type AuthConfig = {
 const here = dirname(fileURLToPath(import.meta.url));
 const DATA = () => process.env.STUDIO_DATA_DIR ?? join(here, "..", ".data");
 const COOKIE = "studio_session";
-const OWNER: User = { id: "owner", name: "Studio owner", email: "owner@localhost", groups: ["studio-builders"], builder: true };
+const OWNER: User = { id: "owner", name: "Studio owner", email: "owner@localhost", groups: ["studio-builders"], builder: true, solo: true };
 
 export function publicUrl() {
   return (process.env.STUDIO_PUBLIC_URL ?? `http://localhost:${process.env.STUDIO_WEB_PORT ?? 5173}`).replace(/\/$/, "");
@@ -92,9 +92,19 @@ export class Auth {
       if (id && this.sessions.delete(id)) this.persist();
       res.set("set-cookie", `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`).json({ ok: true });
     });
+    /* On this machine (the sample organisation's sign-in), the studio can also be used on your own:
+       every builder feature, with apps on their own data, and no organisation or data catalog. */
+    app.post("/api/auth/solo", (_req, res) => {
+      if (this.config.mode !== "local") return res.status(403).json({ ok: false, code: "SIGN_IN_REQUIRED", message: "This studio needs you to sign in with your organisation" });
+      const id = randomBytes(24).toString("base64url");
+      const ttl = 30 * 24 * 3600 * 1000;
+      this.sessions.set(id, { id, user: OWNER, catalogToken: null, expiresAt: Date.now() + ttl, createdAt: Date.now() });
+      this.persist();
+      res.set("set-cookie", `${COOKIE}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(ttl / 1000)}`).json({ ok: true, user: OWNER });
+    });
     app.get("/api/me", (req, res) => {
       const s = this.session(req);
-      res.json({ user: s?.user ?? null, auth: { mode: this.config.mode, label: this.config.label }, expiresAt: s && Number.isFinite(s.expiresAt) ? new Date(s.expiresAt).toISOString() : null });
+      res.json({ user: s?.user ?? null, catalog: !!s?.catalogToken, auth: { mode: this.config.mode, label: this.config.label, solo: this.config.mode === "local" }, expiresAt: s && Number.isFinite(s.expiresAt) ? new Date(s.expiresAt).toISOString() : null });
     });
   }
 

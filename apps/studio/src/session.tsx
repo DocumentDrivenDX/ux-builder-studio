@@ -4,14 +4,18 @@
    the sign-in screen again. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type Me = { id: string; name: string; email: string; groups: string[]; builder: boolean };
-export type AuthInfo = { mode: "local" | "oidc" | "none"; label: string };
+export type Me = { id: string; name: string; email: string; groups: string[]; builder: boolean; solo?: boolean };
+export type AuthInfo = { mode: "local" | "oidc" | "none"; label: string; solo?: boolean };
 type Session = {
   me: Me | null;
   auth: AuthInfo | null;
   loading: boolean;
+  /** The signed-in person can read the organisation's data catalog. */
+  catalog: boolean;
   /** Go to the organisation's sign-in, and come back here. */
   signIn(): void;
+  /** Use the studio on your own: every builder feature, apps on their own data, no organisation. */
+  solo(): Promise<void>;
   signOut(): Promise<void>;
 };
 
@@ -28,11 +32,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [auth, setAuth] = useState<AuthInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [catalog, setCatalog] = useState(false);
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/me").then((x) => x.json());
       setMe(r.user ?? null);
       setAuth(r.auth ?? null);
+      setCatalog(!!r.catalog);
     } catch {
       setMe(null);
     } finally {
@@ -46,7 +52,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SIGNED_OUT_EVENT, out);
   }, [load]);
   const value = useMemo<Session>(() => ({
-    me, auth, loading,
+    me, auth, loading, catalog,
+    async solo() {
+      await fetch("/api/auth/solo", { method: "POST" });
+      await load();
+    },
     signIn() {
       window.location.href = `/api/auth/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     },
@@ -55,7 +65,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setMe(null);
       window.history.replaceState(null, "", "/");
     },
-  }), [me, auth, loading]);
+  }), [me, auth, loading, catalog, load]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

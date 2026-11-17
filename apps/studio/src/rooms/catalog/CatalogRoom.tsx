@@ -17,9 +17,9 @@ export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
   const [kits, setKits] = useState<BrandKit[]>([]);
   const [tree, setTree] = useState<CatalogTree | null>(null);
   const [catalogOn, setCatalogOn] = useState(false);
-  const { me } = useSession();
+  const { me, catalog: canReadCatalog } = useSession();
   useEffect(() => { api.brandKits().then((r) => setKits(r.kits)).catch(() => {}); }, [apps]);
-  useEffect(() => { api.catalog().then((c) => { setCatalogOn(c.available); if (c.available) api.catalogTree().then((r) => setTree(r.tree)).catch(() => {}); }).catch(() => {}); }, []);
+  useEffect(() => { api.catalog().then((c) => { setCatalogOn(c.available && canReadCatalog); if (c.available && canReadCatalog) api.catalogTree().then((r) => setTree(r.tree)).catch(() => {}); }).catch(() => {}); }, []);
   const look = useStudioAppearance();
   const ctx: CatalogCtx = useMemo(() => ({
     setStudioAppearance: (input) => setStudioAppearance(look, input.appearance),
@@ -53,7 +53,7 @@ export function CatalogRoom({ apps }: { apps: CatalogEntry[] }) {
       catalog: { count: apps.length, apps: apps.map((a) => `${a.id}: ${a.name} (v${a.version})`), kits: kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`) },
       dataCatalog: {
         available: catalogOn,
-        person: me ? `${me.name} (${me.groups.join(", ")}); ${me.builder ? "a studio builder" : "not a builder: may only use apps shared with them"}` : "nobody signed in",
+        person: me?.solo ? "working on their own: no organisation and no data catalog, so every app has its own data" : me ? `${me.name} (${me.groups.join(", ")}); ${me.builder ? "a studio builder" : "not a builder: may only use apps shared with them"}` : "nobody signed in",
         tables: (tree ?? []).flatMap((c) => c.schemas.flatMap((s) => s.tables.map((t) => `${t.fullName}: ${t.comment ?? ""} [${t.access.change ? "read and change" : "read only"}]`))),
       },
     },
