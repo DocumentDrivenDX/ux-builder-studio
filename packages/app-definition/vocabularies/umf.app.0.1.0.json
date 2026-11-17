@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "coreVersion": "0.10.0",
   "description": "An app as a catalog entry, at document scope: what it is for, its roles, the values it derives from its records, who may see which rows, how relationships map to fields, and the sample data a preview runs on. Presentation is umf.ux; behaviour is umf.actions.",
-  "semantics": "App profile 0.1 (ux-builder studio). Roles are referenced by umf.actions role authorization and by umf.ux screens and navigation. Derived values are named, read-only values computed per row from umf.app.expr 1 expressions; they never persist. Access rules grant roles visibility of a record's rows, optionally narrowed by a row condition; a record with no access rules is visible to every role, a record with rules is visible only through them. Foreign keys name the field of a relationship's source record that holds the target's primary key. Samples are fabricated rows and identities for previews; they are never production data. Expressions are closed (no unknown operators, no code).",
+  "semantics": "App profile 0.1 (ux-builder studio). Roles are referenced by umf.actions role authorization and by umf.ux screens and navigation. Derived values are named, read-only values computed per row from umf.app.expr 1 expressions; they never persist. Access rules grant roles visibility of a record's rows, optionally narrowed by a row condition; a record with no access rules is visible to every role, a record with rules is visible only through them. Foreign keys name the field of a relationship's source record that holds the target's primary key. Samples are fabricated rows and identities for previews; they are never production data. Expressions are closed (no unknown operators, no code). Sources bind a record to an asset in the organisation's data catalog (catalog.schema.table): its rows are read and changed as the signed-in person, so the catalog's grants, row filters and column masks always apply, and the app's own access rules can only narrow them. A role may name organisation groups; a signed-in person has the roles whose groups they belong to.",
   "scopes": ["document"],
   "capabilities": {
     "validation": "semantic",
@@ -22,6 +22,8 @@
     "type": "object",
     "required": ["name", "version", "roles"],
     "properties": {
+      "kind": { "enum": ["reporting", "data-management", "own-data"], "description": "What the app is for: reporting on catalog data (read-only), managing catalog data (read and change), or its own data model." },
+      "sources": { "type": "array", "maxItems": 64, "description": "Records whose rows live in the organisation's data catalog, read and written as the signed-in person under the catalog's own permissions. A record with a source has no table of its own and no samples.", "items": { "$ref": "#/$defs/source" } },
       "name": { "type": "string", "minLength": 1, "maxLength": 120 },
       "description": { "type": "string", "maxLength": 2000 },
       "useCase": { "type": "string", "maxLength": 2000 },
@@ -80,6 +82,22 @@
         "properties": {
           "id": { "$ref": "#/$defs/id" },
           "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "groups": { "type": "array", "description": "Organisation groups (from the studio's sign-in) whose members have this role in the app. A signed-in person has every role whose groups they belong to.", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true, "maxItems": 64 }
+        },
+        "additionalProperties": false
+      },
+      "source": {
+        "type": "object",
+        "required": ["id", "record", "asset", "access"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "record": { "$ref": "#/$defs/ref" },
+          "asset": { "type": "string", "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$", "description": "The catalog asset's full name: catalog.schema.table." },
+          "access": { "enum": ["read", "change"], "description": "What the app asks of the asset. change needs the catalog's MODIFY privilege for the person; the app can never widen what the catalog allows." },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 50000, "description": "The most rows read at a time (default 5000)." },
+          "columns": { "type": "object", "description": "Field name to catalog column name, where they differ.", "additionalProperties": { "type": "string", "minLength": 1 } },
+          "title": { "type": "string" },
           "description": { "type": "string" }
         },
         "additionalProperties": false

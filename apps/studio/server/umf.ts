@@ -113,6 +113,14 @@ const deny = { kind: "deny" };
 export function withTables(doc: AppDefinition) {
   const d = structuredClone(doc) as any;
   const m = d.modules[0];
+  // Records whose rows live in the data catalog get no table here, and links to them no database foreign key.
+  const sourced = new Set<string>((d.extensions?.["umf.app"]?.sources ?? []).map((s: any) => s.record?.element));
+  if (sourced.size) {
+    const gone = new Set<string>();
+    for (const e of m.elements) if (e.kind === "record" && sourced.has(e.id)) { gone.add(e.id); for (const mr of e.members ?? []) gone.add(mr.element); }
+    m.elements = m.elements.filter((e: any) => !gone.has(e.id));
+    m.relationships = (m.relationships ?? []).filter((r: any) => !sourced.has(r.source?.[0]?.element) && !sourced.has(r.target?.[0]?.element));
+  }
   const els = new Map<string, any>(m.elements.map((e: any) => [e.id, e]));
   const fks: any[] = d.extensions?.["umf.app"]?.foreignKeys ?? [];
   const rels = new Map<string, any>((m.relationships ?? []).map((r: any) => [r.id, r]));
@@ -160,7 +168,7 @@ const deployments = new Map<string, Deployment>();
 /* UMF's table compiler is CPU-heavy; a definition's deployment never changes, so
    compile it once (when the version is saved) and serve that afterwards. */
 export async function compileDeployment(doc: AppDefinition, schema: string): Promise<Deployment> {
-  const key = `${schema}:${hash([doc.modules, doc.extensions?.["umf.app"]?.foreignKeys])}`;
+  const key = `${schema}:${hash([doc.modules, doc.extensions?.["umf.app"]?.foreignKeys, doc.extensions?.["umf.app"]?.sources])}`;
   const cached = deployments.get(key);
   if (cached) return cached;
   const result = await compileDeploymentUncached(doc, schema);
@@ -171,6 +179,8 @@ export async function compileDeployment(doc: AppDefinition, schema: string): Pro
 async function compileDeploymentUncached(doc: AppDefinition, schema: string): Promise<Deployment> {
   const umf = await loadUmf();
   const physical = withTables(doc);
+  // Every record reads the data catalog: nothing to deploy but the schema.
+  if (!physical.modules[0].elements.some((e: any) => e.kind === "record")) return { schema, roles: [], steps: [], digest: "catalog-only" };
   const role = (s: string) => `${schema}_${s}`.slice(0, 63);
   const configuration = { module: physical.modules[0].id, schema, ownerRole: role("owner"), personRole: role("person"), batchRole: role("batch"), groupRoles: {} };
   const reply = await umf.call({ op: "compile", text: JSON.stringify(physical), configuration });

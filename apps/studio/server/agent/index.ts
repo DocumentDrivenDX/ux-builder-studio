@@ -13,6 +13,7 @@ import { pickModel, describeModel } from "./model.js";
 import { systemPrompt } from "./knowledge.js";
 import { ConversationError, conversations, type Scope } from "./conversations.js";
 import { listApps } from "../apps.js";
+import { userOf } from "../auth.js";
 
 export const LOCAL_USER = { userId: "studio-user", accountId: "studio" } as const;
 const SESSION_TOKEN = process.env.STUDIO_SESSION_TOKEN ?? `studio-${randomBytes(12).toString("hex")}`;
@@ -32,7 +33,7 @@ const appOfPath = (path: unknown) => {
 };
 
 const store = {
-  create: (id: string) => conversations.create(id),
+  create: (id: string, owner: string | null = null) => conversations.create(id, owner),
   appendUser(conversationId: string, turnId: string, content: string, scope: Scope | null) {
     conversations.appendUser(conversationId, turnId, content, scope);
     running.set(conversationId, turnId);
@@ -127,14 +128,20 @@ export async function startAgent({ webOrigins, realtimePort = 3331, workerPort =
     app.get("/api/agent/session", (_req, res) => {
       res.json({ realtimeUrl: `http://localhost:${realtime.port}`, token: SESSION_TOKEN, model: label, description: describeModel(label), available: health.ok, problem: health.problem, checkedAt: health.checkedAt });
     });
-    app.post("/api/agent/conversations", (_req, res) => {
+    // Each person's conversations are their own.
+    const mine = (req: express.Request, ids: string[]) => {
+      const who = userOf(req).email;
+      if (ids.some((id) => !conversations.mayOpen(id, who))) throw new ConversationError(404, "NOT_FOUND", "There is no such conversation");
+    };
+    app.post("/api/agent/conversations", (req, res) => {
       const conversationId = randomUUID();
-      store.create(conversationId);
+      store.create(conversationId, userOf(req).email);
       res.json({ conversationId });
     });
     app.post("/api/agent/conversations/:id/messages", async (req, res, next) => {
       try {
         const conversationId = String(req.params.id);
+        if (!conversations.mayOpen(conversationId, userOf(req).email)) return res.status(404).json({ ok: false, code: "NOT_FOUND", message: "There is no such conversation" });
         const { content = "", context, approval, resume } = req.body ?? {};
         const turnId = randomUUID();
         const socketRoom = `turn:${turnId}`;
@@ -176,17 +183,20 @@ export async function startAgent({ webOrigins, realtimePort = 3331, workerPort =
         scopeId: q.scopeId === undefined ? undefined : q.scopeId === "" ? null : q.scopeId,
         status: (q.status as any) ?? "active",
         search: q.search,
+        owner: userOf(req).email,
       });
     }));
-    app.get("/api/agent/conversations/:id", handle((req) => conversations.get(String(req.params.id))));
-    app.patch("/api/agent/conversations/:id", handle((req) => conversations.rename(String(req.params.id), req.body?.title ?? null)));
+    app.get("/api/agent/conversations/:id", handle((req) => { mine(req, [String(req.params.id)]); return conversations.get(String(req.params.id)); }));
+    app.patch("/api/agent/conversations/:id", handle((req) => { mine(req, [String(req.params.id)]); return conversations.rename(String(req.params.id), req.body?.title ?? null); }));
     app.post("/api/agent/conversations/update", handle((req) => {
       const ids: string[] = req.body?.conversationIds ?? [];
+      mine(req, ids);
       if (ids.some((id) => running.has(id) && req.body?.changes?.archived)) throw new ConversationError(409, "RUNNING", "That conversation is still answering");
       return conversations.update(ids, req.body?.changes ?? {}, scopeOf);
     }));
     app.post("/api/agent/conversations/delete", handle((req) => {
       const ids: string[] = req.body?.conversationIds ?? [];
+      mine(req, ids);
       if (ids.some((id) => running.has(id))) throw new ConversationError(409, "RUNNING", "That conversation is still answering");
       conversations.remove(ids);
     }, 204));

@@ -100,9 +100,10 @@ function fieldElement(doc, record, f) {
 
 /* ---------- identity and look ---------- */
 
-export function setIdentity(doc, { name, description, useCase, version, template, tags, visibility }) {
+export function setIdentity(doc, { name, description, useCase, version, template, tags, visibility, kind }) {
   const d = clone(doc);
   const a = app(d);
+  if (kind != null) a.kind = kind;
   if (name != null) { a.name = name; ux(d).shell.title = name; mod0(d).title = name; }
   if (description != null) a.description = description;
   if (useCase != null) a.useCase = useCase;
@@ -130,11 +131,22 @@ export function setShell(doc, { title, frame }) {
 
 /* ---------- roles ---------- */
 
-export function addRole(doc, { id, name, description }) {
+export function addRole(doc, { id, name, description, groups }) {
   need(ID.test(id ?? ""), "OP_ID", `Role id ${id} must be lower-case`);
   const d = clone(doc);
   need(!app(d).roles.some((r) => r.id === id), "OP_EXISTS", `Role ${id} already exists`);
-  app(d).roles.push({ id, name: name ?? humanize(id), ...(description ? { description } : {}) });
+  app(d).roles.push({ id, name: name ?? humanize(id), ...(description ? { description } : {}), ...(list(groups).length ? { groups: [...new Set(groups)] } : {}) });
+  return d;
+}
+
+/* Which organisation groups have a role: a signed-in person has every role
+   whose groups they belong to. An empty list leaves the role to no group. */
+export function setRoleGroups(doc, { id, groups }) {
+  const d = clone(doc);
+  const role = app(d).roles.find((r) => r.id === id);
+  need(role, "OP_ROLE", `There is no role ${id}`);
+  if (list(groups).length) role.groups = [...new Set(groups)];
+  else delete role.groups;
   return d;
 }
 
@@ -221,6 +233,10 @@ export function removeRecord(doc, { id }) {
   app(d).derived = list(app(d).derived).filter((x) => x.record.element !== rec.id);
   app(d).access = list(app(d).access).filter((x) => x.record.element !== rec.id);
   app(d).samples.records = list(app(d).samples.records).filter((x) => x.record.element !== rec.id);
+  if (app(d).sources) {
+    app(d).sources = app(d).sources.filter((x) => x.record.element !== rec.id);
+    if (!app(d).sources.length) delete app(d).sources;
+  }
   return d;
 }
 
@@ -403,11 +419,98 @@ export function setNavigation(doc, { navigation, home }) {
   return d;
 }
 
+/* ---------- data catalog sources ---------- */
+
+/* The field type a catalog column reads as, from its type and name. */
+export function fieldTypeOfColumn(column) {
+  const t = String(column.type ?? "STRING").toUpperCase().replace(/\(.*$/, "");
+  const n = String(column.name ?? "").toLowerCase();
+  if (["INT", "INTEGER", "LONG", "BIGINT", "SHORT", "SMALLINT", "BYTE", "TINYINT"].includes(t)) return "integer";
+  if (["DECIMAL", "NUMERIC", "DOUBLE", "FLOAT", "REAL"].includes(t)) {
+    if (/hours?$/.test(n)) return "hours";
+    if (/(amount|budget|rate|price|fee|salary|total|cost|revenue|value|balance|paid)/.test(n)) return "money";
+    return "number";
+  }
+  if (t === "BOOLEAN") return "boolean";
+  if (t === "DATE") return "date";
+  if (t === "TIMESTAMP" || t === "TIMESTAMP_NTZ") return "datetime";
+  if (/email/.test(n)) return "email";
+  if (list(column.values).length) return "choice";
+  return "text";
+}
+
+const columnFieldName = (c) => {
+  let n = String(c).toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!/^[a-z]/.test(n)) n = `c_${n}`;
+  return n.slice(0, 41);
+};
+
+/* Bind a record to a table in the organisation's data catalog. The record is
+   created from the table's columns (the studio's server reads them from the
+   catalog, as the person, before this runs), has no table of its own and no
+   samples: its rows are the catalog's, read and changed as the signed-in
+   person under the catalog's grants, row filters and column masks. */
+export function addSource(doc, { asset, access = "read", record, title, description, key, columns = [], limit }) {
+  need(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(asset ?? ""), "OP_SOURCE", `Catalog asset ${asset} must be a full name: catalog.schema.table`);
+  need(["read", "change"].includes(access), "OP_SOURCE", `Access ${access} must be read or change`);
+  need(list(columns).length > 0, "OP_SOURCE_COLUMNS", `The catalog's columns for ${asset} are needed; the studio reads them when it applies this operation`);
+  const recId = record ?? columnFieldName(asset.split(".")[2]);
+  need(!list(app(doc).sources).some((s) => s.asset.toLowerCase() === asset.toLowerCase()), "OP_EXISTS", `${asset} is already a source of this app`);
+  const mapping = {};
+  const fields = columns.map((c) => {
+    const name = columnFieldName(c.name);
+    if (name !== c.name) mapping[name] = c.name;
+    return {
+      name,
+      type: c.name === key && fieldTypeOfColumn(c) === "text" ? "id" : fieldTypeOfColumn(c),
+      title: c.title ?? humanize(name),
+      ...(c.description ? { description: c.description } : {}),
+      required: c.nullable === false || c.name === key,
+      ...(list(c.values).length ? { values: c.values } : {}),
+    };
+  });
+  const keyName = key ? columnFieldName(key) : fields[0].name;
+  let d = addRecord(doc, { id: recId, title: title ?? humanize(recId.replace(/s$/, "")), description: description ?? `Rows of ${asset} in the data catalog`, fields, key: keyName });
+  const a = app(d);
+  (a.sources ??= []).push({
+    id: `${recId}-source`.replace(/_/g, "-"),
+    record: ref(d, recId),
+    asset,
+    access,
+    ...(limit ? { limit } : {}),
+    ...(Object.keys(mapping).length ? { columns: mapping } : {}),
+  });
+  a.samples.records = list(a.samples.records).filter((x) => x.record.element !== recId);
+  return d;
+}
+
+/* Stop using a catalog table: the record and everything that uses it go too. */
+export function removeSource(doc, { record }) {
+  let d = clone(doc);
+  const rec = recordEl(d, record);
+  need(list(app(d).sources).some((s) => s.record.element === rec.id), "OP_SOURCE", `${rec.id} is not a catalog source`);
+  app(d).sources = list(app(d).sources).filter((s) => s.record.element !== rec.id);
+  if (!app(d).sources.length) delete app(d).sources;
+  d = removeRecord(d, { id: rec.id });
+  return d;
+}
+
+/* Change what the app asks of a source: read, or read and change. */
+export function setSourceAccess(doc, { record, access, limit }) {
+  const d = clone(doc);
+  const s = list(app(d).sources).find((x) => x.record.element === record);
+  need(s, "OP_SOURCE", `${record} is not a catalog source`);
+  if (access) { need(["read", "change"].includes(access), "OP_SOURCE", `Access ${access} must be read or change`); s.access = access; }
+  if (limit) s.limit = limit;
+  return d;
+}
+
 /* ---------- samples ---------- */
 
 export function setSamples(doc, { record, rows }) {
   const d = clone(doc);
   const rec = recordEl(d, record);
+  need(!list(app(d).sources).some((x) => x.record.element === rec.id), "OP_SOURCE_SAMPLES", `${rec.id} reads its rows from the data catalog, so it has no sample rows`);
   const s = app(d).samples;
   s.records = list(s.records).filter((x) => x.record.element !== rec.id);
   s.records.push({ record: ref(d, rec.id), rows });
@@ -464,7 +567,7 @@ export function applyPatch(doc, operations) {
 
 /* The operation table the studio's room and API expose, by name. */
 export const OPERATIONS = {
-  setIdentity, setLook, setShell, addRole, removeRole, addRecord, addField, updateField, removeField, removeRecord,
+  setIdentity, setLook, setShell, addRole, removeRole, setRoleGroups, addSource, removeSource, setSourceAccess, addRecord, addField, updateField, removeField, removeRecord,
   addRelationship, addDerived, removeDerived, addAccess, addAction, removeAction, putScreen, removeScreen,
   setNavigation, setSamples, setIdentities, makeVariant, applyPatch,
 };
@@ -491,5 +594,8 @@ export function summarize(doc) {
     screens: list(idx.ux.screens).map((s) => ({ id: s.id, pattern: s.pattern, roles: s.roles ?? [], regions: list(s.regions).map((r) => `${r.kind}:${r.id}`) })),
     navigation: list(idx.ux.shell?.navigation).map((n) => `${n.label} -> ${n.screen}${n.roles ? ` (${n.roles.join(",")})` : ""}`),
     samples: list(idx.app.samples?.records).map((s) => `${s.record.element}: ${s.rows.length}`),
+    kind: idx.app.kind ?? (list(idx.app.sources).length ? "reporting" : "own-data"),
+    sources: list(idx.app.sources).map((s) => ({ record: s.record.element, asset: s.asset, access: s.access })),
+    roleGroups: Object.fromEntries(list(idx.app.roles).filter((r) => list(r.groups).length).map((r) => [r.id, r.groups])),
   };
 }

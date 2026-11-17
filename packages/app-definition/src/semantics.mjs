@@ -86,6 +86,40 @@ export function appSemantics(value, context) {
     list(p.roles).forEach((r, j) => { if (!roleIds.has(r)) add("APP_ROLE_UNKNOWN", `/samples/identities/${i}/roles/${j}`, `Role ${r} is not declared`); });
   });
 
+  // Catalog sources: one per record, never with samples; an action changes at
+  // most one catalog table (the catalog has no transaction across tables), and
+  // only a table the app asks to change.
+  const sourceRecords = new Map();
+  list(value.sources).forEach((s, i) => {
+    const at = `/sources/${i}`;
+    const rec = idx.record(s.record);
+    if (!rec) return add("APP_REF", `${at}/record`, `Record ${refKey(s.record)} does not exist`);
+    if (sourceRecords.has(rec.id)) add("APP_SOURCE_DUPLICATE", `${at}/record`, `${rec.name} already reads from ${sourceRecords.get(rec.id).asset}`);
+    sourceRecords.set(rec.id, s);
+    if (list(value.samples?.records).some((x) => x.record?.element === rec.id)) add("APP_SOURCE_SAMPLES", `${at}/record`, `${rec.name} reads its rows from the data catalog (${s.asset}), so it can't have sample rows`);
+    for (const k of Object.keys(s.columns ?? {})) if (!rec.fields.some((f) => f.name === k)) add("APP_REF", `${at}/columns/${k}`, `${rec.name} has no field ${k}`);
+  });
+  for (const a of idx.actions.values()) {
+    const written = new Set();
+    for (const e of list(a.binding?.effects)) {
+      let recId = null;
+      if (e.kind === "create") recId = e.record?.element;
+      else if ((e.kind === "set" || e.kind === "delete") && e.entity?.parameter) recId = list(a.parameters).find((p) => p.id === e.entity.parameter)?.target?.element;
+      else if (e.kind === "link" || e.kind === "unlink") recId = idx.relationships.get(e.relationship?.relationship)?.source?.element;
+      const src = recId ? sourceRecords.get(recId) : null;
+      if (!src) continue;
+      written.add(src.asset);
+      if (src.access !== "change") add("APP_SOURCE_READ_ONLY", "/sources", `Action ${a.id} changes ${recId}, but the app only reads ${src.asset}; ask for change access to it, or don't change it`);
+    }
+    if (written.size > 1) add("APP_SOURCE_ONE_TABLE", "/sources", `Action ${a.id} changes ${[...written].join(" and ")}; an action may change one catalog table, so that it either happens completely or not at all`);
+  }
+  list(value.roles).forEach((r, i) => {
+    if (list(r.groups).some((g) => !String(g).trim())) add("APP_ROLE_GROUP", `/roles/${i}/groups`, `Role ${r.id} names an empty group`);
+  });
+  if (sourceRecords.size && !list(value.roles).some((r) => list(r.groups).length)) {
+    add("APP_ROLE_NO_GROUPS", "/roles", "This app reads the data catalog, so people use it signed in as themselves; give at least one role the organisation groups whose members have it", "warning");
+  }
+
   // Action authorization roles must be app roles.
   for (const a of idx.actions.values()) {
     for (const r of list(a.authorization?.kind === "roles" ? a.authorization.roles : [])) {
@@ -243,6 +277,27 @@ export function uxSemantics(value, context) {
         else checkPlacement({ action: r.action, bind: r.bind, inputs: r.inputs, success: r.success }, rat, s, s.param?.record);
       }
       if (r.kind === "stats") list(r.tiles).forEach((t, k) => exprDiagnostics(t.value, `${rat}/tiles/${k}/value`, add));
+      if (r.kind === "chart") {
+        const rec = r.record ? idx.record(r.record) : null;
+        if (!rec) add("UX_REF", `${rat}/record`, `A chart region needs the record it counts`);
+        else {
+          if (!r.groupBy) add("UX_CHART_GROUP", rat, `Chart ${r.id} needs a groupBy: the value each bar or point stands for`);
+          else checkValue(r.groupBy, `${rat}/groupBy`, rec.ref);
+          const m = r.measure ?? {};
+          if (!m.aggregate) add("UX_CHART_MEASURE", rat, `Chart ${r.id} needs a measure (count, sum, average, min or max)`);
+          else if (m.aggregate !== "count") {
+            const f = m.field ? idx.field(m.field) : null;
+            const dv = m.derived ? list(idx.derived.get(refKey(rec.ref))).find((x) => x.id === m.derived) : null;
+            if (!f && !dv) add("UX_CHART_MEASURE", `${rat}/measure`, `A ${m.aggregate} needs the field or derived value it adds up`);
+            else if (f && !["integer", "decimal", "float"].includes(f.scalarType)) add("UX_CHART_MEASURE", `${rat}/measure/field`, `${f.name} is ${f.scalarType}; a ${m.aggregate} needs a number`);
+          }
+          if (r.bucket) {
+            const g = r.groupBy?.field ? idx.field(r.groupBy.field) : null;
+            if (g && !["date", "timestamp"].includes(g.scalarType)) add("UX_CHART_BUCKET", `${rat}/bucket`, `${g.name} is ${g.scalarType}; periods need a date`);
+          }
+        }
+        exprDiagnostics(r.filter, `${rat}/filter`, add);
+      }
       if (r.kind === "notice" && !r.message && !r.title) add("UX_NOTICE_TEXT", rat, "A notice needs a title or a message");
       list(r.sections).forEach((sec, k) => {
         const sat = `${rat}/sections/${k}`;

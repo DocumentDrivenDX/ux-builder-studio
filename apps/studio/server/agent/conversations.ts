@@ -24,6 +24,8 @@ type Conversation = {
   lastActiveAt: string;
   archivedAt: string | null;
   scope: Scope | null;
+  /** Whose conversation it is (their email); conversations from before sign-in have none and are everyone's. */
+  owner?: string | null;
   entries: Entry[];
 };
 
@@ -96,9 +98,15 @@ function summary(c: Conversation): Summary {
 }
 
 export const conversations = {
-  create(id: string) {
+  create(id: string, owner: string | null = null) {
     const t = now();
-    save({ conversationId: id, title: null, createdAt: t, updatedAt: t, lastActiveAt: t, archivedAt: null, scope: null, entries: [] });
+    save({ conversationId: id, title: null, createdAt: t, updatedAt: t, lastActiveAt: t, archivedAt: null, scope: null, owner, entries: [] });
+  },
+
+  /** Whether a person may see a conversation: their own, or one from before sign-in. */
+  mayOpen(id: string, owner: string) {
+    const c = load(id);
+    return !c || !c.owner || c.owner.toLowerCase() === owner.toLowerCase();
   },
 
   /** The person's message starts a turn. The conversation is filed under the app it is about, when there is one. */
@@ -126,7 +134,7 @@ export const conversations = {
     save(c);
   },
 
-  list({ limit = 50, offset = 0, scopeId, status = "active", search }: { limit?: number; offset?: number; scopeId?: string | null; status?: "active" | "archived" | "all"; search?: string }) {
+  list({ limit = 50, offset = 0, scopeId, status = "active", search, owner }: { limit?: number; offset?: number; scopeId?: string | null; status?: "active" | "archived" | "all"; search?: string; owner?: string }) {
     mkdirSync(ROOT, { recursive: true });
     const words = (search ?? "").toLowerCase().split(/\s+/).filter(Boolean);
     const all: Summary[] = [];
@@ -135,6 +143,7 @@ export const conversations = {
       const c = load(f.slice(0, -5));
       // A conversation the person never wrote in is not history.
       if (!c || !firstUser(c)) continue;
+      if (owner && c.owner && c.owner.toLowerCase() !== owner.toLowerCase()) continue;
       if (status === "active" && c.archivedAt) continue;
       if (status === "archived" && !c.archivedAt) continue;
       if (scopeId !== undefined && (c.scope?.id ?? null) !== scopeId) continue;

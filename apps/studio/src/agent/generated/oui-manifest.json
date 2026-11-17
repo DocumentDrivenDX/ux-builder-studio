@@ -1,5 +1,5 @@
 {
-  "buildId": "15c74fc1125ea8ff",
+  "buildId": "8184c32108a0a403",
   "surfaces": [
     {
       "actions": [
@@ -1247,6 +1247,10 @@
                         "setLook",
                         "setShell",
                         "addRole",
+                        "setRoleGroups",
+                        "addSource",
+                        "removeSource",
+                        "setSourceAccess",
                         "removeRole",
                         "addRecord",
                         "addField",

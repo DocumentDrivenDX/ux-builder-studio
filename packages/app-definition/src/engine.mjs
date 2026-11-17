@@ -277,7 +277,8 @@ export function sampleRows(idx) {
     order.push(rec);
   };
   for (const rec of idx.records.values()) visit(rec);
-  return order.map((rec) => ({
+  // A catalog source's rows are the catalog's, never samples.
+  return order.filter((rec) => !idx.sources?.has(rec.id)).map((rec) => ({
     record: rec.id,
     rows: list(byRecord.get(refKey(rec.ref))).map((r) => Object.fromEntries(rec.fields.map((f) => [f.name, coerce(f, r[f.name] ?? null)]))),
   }));

@@ -8,6 +8,7 @@ import { createConnection } from "node:net";
 import { loadUmf } from "./umf.js";
 import { database, describeDatabase } from "./db.js";
 import { createApi } from "./api.js";
+import { startOrganisation } from "./organisation.js";
 
 const API_PORT = Number(process.env.STUDIO_API_PORT ?? 8787);
 const WEB_ORIGINS = (process.env.STUDIO_WEB_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173").split(",");
@@ -40,13 +41,16 @@ if (!process.env.STUDIO_NO_AGENT) {
   agent = await startAgent({ webOrigins: WEB_ORIGINS, realtimePort: Number(process.env.STUDIO_REALTIME_PORT ?? 3331), workerPort: Number(process.env.STUDIO_WORKER_PORT ?? 8091) });
   console.log(`agent: ${agent.model} (redis ${redis} on ${REDIS_PORT})`);
 }
-const app = createApi({ agent });
+const org = await startOrganisation();
+console.log(`sign-in: ${org.auth.config.label}`);
+const app = createApi({ agent, auth: org.auth });
 const server = app.listen(API_PORT, "127.0.0.1", async () => {
   console.log(`studio api: http://127.0.0.1:${API_PORT} (UMF ${version}, ${await describeDatabase()}, ready in ${Date.now() - t0} ms)`);
 });
 const stop = async () => {
   server.close();
   await agent?.close();
+  await org.close();
   process.exit(0);
 };
 process.on("SIGINT", stop);

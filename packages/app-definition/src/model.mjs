@@ -89,6 +89,9 @@ export function indexDefinition(doc) {
     derived.get(k).push(d);
   }
 
+  // Records whose rows live in the organisation's data catalog (umf.app sources), by record id.
+  const sources = new Map(list(app.sources).map((s) => [s.record?.element, s]));
+
   const screens = new Map(list(ux.screens).map((s) => [s.id, s]));
   const roles = new Map(list(app.roles).map((r) => [r.id, r]));
 
@@ -104,6 +107,8 @@ export function indexDefinition(doc) {
     derived,
     screens,
     roles,
+    sources,
+    sourceOf: (recordId) => sources.get(recordId) ?? null,
     record: (r) => records.get(typeof r === "string" ? r : refKey(r)),
     field: (r) => fields.get(typeof r === "string" ? r : refKey(r)),
     recordById: (id) => [...records.values()].find((x) => x.id === id || x.name === id),

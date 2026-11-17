@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "coreVersion": "0.10.0",
   "description": "An app's user experience, at document scope: its look, its shell and navigation, and its screens, each built from ux-builder patterns whose regions bind to core records, umf.app derived values and umf.actions actions. This is ux-builder's interaction semantics carried in UMF; rendering is a separate, qualified renderer.",
-  "semantics": "App profile 0.1 (ux-builder studio). A screen chooses one pattern (collection, record, form, schedule, dashboard, queue, home) and lists regions in reading order. Every region and action placement resolves to core records and fields, umf.app derived values, umf.app roles and umf.actions actions; nothing renders that does not resolve. Action placements say where an action is offered, how its parameters are bound (from the row, the screen's parameter, the signed-in person or a literal), whether it needs confirmation and when it shows. A screen is visible to the roles it lists (all roles when none are listed). Navigation names destinations per role. Conditions and text templates are umf.app.expr 1 expressions. Static UX rules (reachability, confirmation of destructive actions, empty states, role consistency) are checked on the declaration, before anything renders.",
+  "semantics": "App profile 0.1 (ux-builder studio). A screen chooses one pattern (collection, record, form, schedule, dashboard, queue, home) and lists regions in reading order. Every region and action placement resolves to core records and fields, umf.app derived values, umf.app roles and umf.actions actions; nothing renders that does not resolve. Action placements say where an action is offered, how its parameters are bound (from the row, the screen's parameter, the signed-in person or a literal), whether it needs confirmation and when it shows. A screen is visible to the roles it lists (all roles when none are listed). Navigation names destinations per role. Conditions and text templates are umf.app.expr 1 expressions. Static UX rules (reachability, confirmation of destructive actions, empty states, role consistency) are checked on the declaration, before anything renders. A chart region groups a record's rows (after its filter and the person's access) by one value, optionally into date periods, and shows one measure per group (count, sum, average, min or max), with the same numbers as a table beside it.",
   "scopes": ["document"],
   "capabilities": {
     "validation": "semantic",
@@ -219,7 +219,7 @@
         "required": ["id", "kind"],
         "properties": {
           "id": { "$ref": "#/$defs/id" },
-          "kind": { "enum": ["collection", "record", "related", "form", "schedule", "stats", "notice", "actions", "document"] },
+          "kind": { "enum": ["collection", "record", "related", "form", "schedule", "stats", "chart", "notice", "actions", "document"] },
           "title": { "$ref": "#/$defs/text" },
           "description": { "$ref": "#/$defs/text" },
           "when": { "$ref": "#/$defs/rule" },
@@ -275,6 +275,22 @@
           "eventActions": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
           "legend": { "type": "array", "items": { "type": "object", "required": ["label"], "properties": { "label": { "type": "string" }, "description": { "type": "string" } } } },
 
+          "chart": { "enum": ["bar", "column", "line"], "description": "chart: bar (horizontal bars, for categories), column (vertical bars) or line (for periods of time)." },
+          "measure": {
+            "type": "object",
+            "description": "chart: what each bar or point shows, over the rows in its group.",
+            "required": ["aggregate"],
+            "properties": {
+              "aggregate": { "enum": ["count", "sum", "average", "min", "max"] },
+              "field": { "$ref": "#/$defs/ref" },
+              "derived": { "type": "string" },
+              "label": { "type": "string" },
+              "format": { "enum": ["number", "currency", "hours", "percent"] }
+            },
+            "additionalProperties": false
+          },
+          "bucket": { "enum": ["day", "week", "month", "quarter", "year"], "description": "chart: groups a date or date-time groupBy into periods." },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100, "description": "chart: the most groups shown (the largest first for bars; the latest for periods)." },
           "tiles": {
             "type": "array",
             "items": {

@@ -47,7 +47,7 @@ const write = (file: string, value: unknown) => {
 };
 
 const dataHash = (doc: AppDefinition) =>
-  createHash("sha256").update(JSON.stringify([doc.modules, doc.extensions?.["umf.app"]?.samples, doc.extensions?.["umf.app"]?.foreignKeys])).digest("hex");
+  createHash("sha256").update(JSON.stringify([doc.modules, doc.extensions?.["umf.app"]?.samples, doc.extensions?.["umf.app"]?.foreignKeys, doc.extensions?.["umf.app"]?.sources])).digest("hex");
 
 const listeners = new Set<(event: { appId: string; version: number; kind: "definition" | "data" }) => void>();
 export const onAppChange = (l: (e: { appId: string; version: number; kind: "definition" | "data" }) => void) => {
@@ -128,13 +128,23 @@ async function save(doc: AppDefinition, meta: Omit<VersionMeta, "version" | "at"
 /* A new app's look can be decided before it is built: a theme, or a brand kit from the library (on its design system), and a default appearance. */
 export type StartingLook = { theme?: string; brandKit?: string; designSystem?: string; appearance?: "system" | "light" | "dark" };
 
-export async function createAppRecord({ id, name, description, useCase, theme, brandKit, designSystem, appearance, definition, by = "person" }: { id?: string; name: string; description?: string; useCase?: string; definition?: AppDefinition; by?: string } & StartingLook) {
+export async function createAppRecord({ id, name, description, useCase, theme, brandKit, designSystem, appearance, definition, by = "person", operations = [], kind }: { id?: string; name: string; description?: string; useCase?: string; definition?: AppDefinition; by?: string; operations?: Operation[]; kind?: "own-data" } & StartingLook) {
   const appId = definition?.id ?? id ?? `app.${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   if (existsSync(join(dirOf(appId), "definition.json"))) throw new AppError(409, "APP_EXISTS", `An app ${appId} already exists`);
   let doc = definition ?? starterDefinition({ id: appId, name, description, useCase, theme });
   if (!definition && (brandKit || appearance)) doc = setLook(doc, { ...(brandKit ? { brandKit, designSystem } : {}), ...(appearance ? { appearance } : {}) }) as AppDefinition;
+  if (!definition && kind) doc = apply(doc, "setIdentity", { kind }) as AppDefinition;
+  // A first version made from what was chosen at the start (an app on catalog data), applied like any other change.
+  for (const [i, o] of operations.entries()) {
+    try {
+      doc = apply(doc, o.op, o.args ?? {}) as AppDefinition;
+    } catch (e: any) {
+      if (e instanceof OpError) throw new AppError(422, e.code, `The first version could not be made (step ${i + 1}, ${o.op}): ${e.message}`);
+      throw e;
+    }
+  }
   checkLook(doc);
-  return save(doc, { by, summary: definition ? `Imported ${name}` : `Created ${name}`, operations: [] });
+  return save(doc, { by, summary: definition ? `Imported ${name}` : operations.length ? `Created ${name} from the data catalog` : `Created ${name}`, operations });
 }
 
 /* Apply operations in order to the current definition; save once, if the
