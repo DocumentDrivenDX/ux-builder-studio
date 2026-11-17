@@ -18,6 +18,7 @@ export interface AppCtx {
   adjustBrandOption(input: { option: string; hueShift?: number; chromaScale?: number; neutralTint?: number; stateHarmony?: number; groundLight?: number; groundDark?: number }): Promise<RoomResult>;
   resetBrandOption(input: { option: string }): RoomResult;
   captureBrandLogo(): RoomResult;
+  showBrandSources(input: { kit: string }): RoomResult;
   setStudioAppearance(input: { appearance: "light" | "dark" | "system" }): RoomResult;
   applyBrandKit(input: { kit: string }): Promise<RoomResult>;
   stopBrandKit(): Promise<RoomResult>;
@@ -171,6 +172,16 @@ export const appRoom: RoomCatalog<AppCtx> = {
       input: { type: "object", properties: { option: { type: "string", description: "An option id from the brand observation" } }, required: ["option"], additionalProperties: false },
       effect: "edit",
       run: (ctx, input) => ctx.resetBrandOption(input as never),
+    },
+    {
+      kind: "action",
+      id: "show-brand-sources",
+      title: "Show a brand kit's sources",
+      description: "Shows where a brand kit came from, read-only: the website (or logo file) it was read from and when, the screenshot, the colours with where each was seen, fonts, the suggested style, and the option, design system and engine settings chosen. Use it when the person asks where a brand came from or wants to review it.",
+      control: "A kit's Sources button in the Brand and style panel",
+      input: { type: "object", properties: { kit: { type: "string", description: "A kit id from the brand observation" } }, required: ["kit"], additionalProperties: false },
+      effect: "view",
+      run: (ctx, input) => ctx.showBrandSources(input as never),
     },
     {
       kind: "action",

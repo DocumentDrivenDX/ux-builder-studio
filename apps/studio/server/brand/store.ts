@@ -29,6 +29,8 @@ export type CaptureRecord = {
   title: string;
   siteName: string | null;
   capturedAt: string;
+  /** The stored screenshot's height in px (the page from the top, at most 2000); older captures kept only the first screen. */
+  screenshotHeight?: number;
   hasLogo: boolean;
   /** The logo's file type (a website's logo is always a PNG screenshot). */
   logoType?: "png" | "svg";
@@ -41,7 +43,8 @@ export type BrandKit = {
   createdAt: string;
   source: { url: string; title: string; captureId: string } | null;
   designSystem: string;
-  option: { id: string; title: string; description: string; strategy: string; adjusted?: Record<string, number> };
+  /** The option chosen: settings are the engine settings it was made with (kits made before they were kept have none; they are worked out again from the capture). */
+  option: { id: string; title: string; description: string; strategy: string; settings?: Record<string, number>; adjusted?: Record<string, number> };
   brand: BrandDoc & { generation?: unknown };
   colours: Array<{ hex: string; sources: string[] }>;
   findings: Finding[];
@@ -98,6 +101,7 @@ export function saveKit(kit: Omit<BrandKit, "id" | "createdAt">): BrandKit {
   write(join(kitsDir(), `${id}.json`), full);
   return full;
 }
+/* Removes the kit only: the capture it was made from stays, as the record of where a brand came from. */
 export function removeKit(id: string) {
   if (!getKit(id)) return false;
   rmSync(join(kitsDir(), `${safe(id)}.json`));

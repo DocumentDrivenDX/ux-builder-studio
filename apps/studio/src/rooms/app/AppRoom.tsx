@@ -80,6 +80,10 @@ export function AppRoom() {
       s.setPanel("brand");
       return asRoom(b.resetOption(input.option));
     },
+    showBrandSources(input) {
+      s.setPanel("brand");
+      return asRoom(b.showSources(input.kit));
+    },
     captureBrandLogo() {
       s.setPanel("brand");
       return { ok: true, data: { shown: "The Brand and style panel; the person adds the logo file there" } };

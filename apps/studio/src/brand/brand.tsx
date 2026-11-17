@@ -55,6 +55,9 @@ type Brand = {
   applyKit(id: string, by?: string): Promise<BrandResult>;
   stopUsingKit(by?: string): Promise<BrandResult>;
   removeKit(id: string): Promise<BrandResult>;
+  /** The kit whose sources (the capture behind it) are open, if any. */
+  sourcesOf: string | null;
+  showSources(kitId: string | null): BrandResult;
 };
 
 const BrandContext = createContext<Brand | null>(null);
@@ -97,6 +100,7 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const [kits, setKits] = useState<BrandKit[]>([]);
   const [appearance, setAppearance] = useState<Appearance>("system");
   const [live, setLive] = useState<Record<string, LiveAdjust>>({});
+  const [sourcesOf, setSourcesOf] = useState<string | null>(null);
   // For the live adjust timers, which outlive a render: the latest capture, the sliders' values, and which reply is current.
   const captureRef = useRef<BrandCapture | null>(null);
   const drafts = useRef<Record<string, Record<string, number>>>({});
@@ -171,7 +175,12 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   }, [s, refreshKits]);
 
   const value = useMemo<Brand>(() => ({
-    url, setUrl, capture, options, busy, error, designSystems, kits, current, appearance, setAppearance, live,
+    url, setUrl, capture, options, busy, error, designSystems, kits, current, appearance, setAppearance, live, sourcesOf,
+    showSources(kitId) {
+      if (kitId && !kits.some((k) => k.id === kitId)) return { ok: false, code: "UNKNOWN_KIT", message: `No brand kit ${kitId}; kits: ${kits.map((k) => k.id).join(", ") || "none"}` };
+      setSourcesOf(kitId);
+      return { ok: true, data: kitId ? { shown: `The sources of ${kitId}: the website or logo it was read from, its screenshot, colours and where each was seen, and what was chosen` } : { shown: "closed" } };
+    },
     setSetting(optionId, name, v) {
       const base = capture?.options.find((o) => o.id === optionId);
       if (!base) return;
@@ -281,7 +290,7 @@ export function BrandProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       } catch (e) { return fail(e); }
     },
-  }), [url, capture, options, adjusted, busy, error, designSystems, kits, current, appearance, live, setLook, refreshKits, setCapture, settle, remake]);
+  }), [url, capture, options, adjusted, busy, error, designSystems, kits, current, appearance, live, sourcesOf, setLook, refreshKits, setCapture, settle, remake]);
 
   return <BrandContext.Provider value={value}>{children}</BrandContext.Provider>;
 }

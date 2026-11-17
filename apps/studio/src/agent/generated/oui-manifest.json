@@ -1,12 +1,12 @@
 {
-  "buildId": "d5b33f3fe018a86f",
+  "buildId": "15c74fc1125ea8ff",
   "surfaces": [
     {
       "actions": [
         {
           "control": "choice",
           "declaredIn": "src/panels/BrandPanel.tsx",
-          "description": "Choose \"The app's default appearance\": The appearance the app opens in once an option is chosen: automatic (the person's setting), light or dark. It is in the Card.",
+          "description": "Choose \"The app's default appearance\": The appearance the app opens in once an option is chosen: automatic (the person's setting), light or dark. It is in the Screenshot.",
           "id": "brand.appearance",
           "input": {
             "additionalProperties": false,
@@ -36,7 +36,7 @@
             {
               "kind": "panel",
               "openedBy": [],
-              "title": "Card"
+              "title": "Screenshot"
             }
           ],
           "source": "control",
@@ -66,7 +66,7 @@
         {
           "control": "choice",
           "declaredIn": "src/panels/BrandPanel.tsx",
-          "description": "Choose \"Style (design system)\": The design system the app is built on: control shapes, density and fonts (Databricks, Material, Fluent or Carbon) It is in the Card.",
+          "description": "Choose \"Style (design system)\": The design system the app is built on: control shapes, density and fonts (Databricks, Material, Fluent or Carbon) It is in the Screenshot.",
           "id": "brand.design-system",
           "input": {
             "additionalProperties": false,
@@ -91,7 +91,7 @@
             {
               "kind": "panel",
               "openedBy": [],
-              "title": "Card"
+              "title": "Screenshot"
             }
           ],
           "source": "control",
@@ -100,7 +100,7 @@
         {
           "control": "text",
           "declaredIn": "src/panels/BrandPanel.tsx",
-          "description": "Type into \"Kit name\": The name the chosen option is kept under in the brand kit library. It is in the Card.",
+          "description": "Type into \"Kit name\": The name the chosen option is kept under in the brand kit library. It is in the Screenshot.",
           "id": "brand.kit-name",
           "input": {
             "additionalProperties": false,
@@ -125,7 +125,7 @@
             {
               "kind": "panel",
               "openedBy": [],
-              "title": "Card"
+              "title": "Screenshot"
             }
           ],
           "source": "control",
@@ -134,7 +134,7 @@
         {
           "control": "choice",
           "declaredIn": "src/panels/BrandPanel.tsx",
-          "description": "Choose \"Show in\": Whether the options are shown in light or dark. It is in the Card.",
+          "description": "Choose \"Show in\": Whether the options are shown in light or dark. It is in the Screenshot.",
           "id": "brand.preview-appearance",
           "input": {
             "additionalProperties": false,
@@ -163,7 +163,7 @@
             {
               "kind": "panel",
               "openedBy": [],
-              "title": "Card"
+              "title": "Screenshot"
             }
           ],
           "source": "control",
@@ -1606,6 +1606,34 @@
           ],
           "source": "room-action",
           "title": "Set the studio's appearance"
+        },
+        {
+          "description": "Show a brand kit's sources: Shows where a brand kit came from, read-only: the website (or logo file) it was read from and when, the screenshot, the colours with where each was seen, fonts, the suggested style, and the option, design system and engine settings chosen. Use it when the person asks where a brand came from or wants to review it. (A kit's Sources button in the Brand and style panel)",
+          "effect": "view",
+          "id": "app/action/show-brand-sources",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "kit": {
+                "description": "A kit id from the brand observation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "kit"
+            ],
+            "type": "object"
+          },
+          "name": "app_show_brand_sources",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "A kit's Sources button in the Brand and style panel"
+            }
+          ],
+          "source": "room-action",
+          "title": "Show a brand kit's sources"
         },
         {
           "description": "Show panel: Shows the App configuration tab with one of its panels. (The App configuration tab and its panel tabs)",

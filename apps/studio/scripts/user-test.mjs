@@ -479,6 +479,27 @@ await step("Bring in the firm's brand from its website: three options, one chose
   await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
   check((await panels().locator(".studio-brand__kits").innerText()).includes("Evergreen Legal"), "the choice is kept as a brand kit in the library");
   await shot("brand-kit-chosen");
+  // Every kit keeps where it came from: its Sources show the capture again, read-only.
+  const row = panels().locator(".studio-brand__kit", { hasText: "In use" }).first();
+  await row.getByRole("button", { name: /^Sources of / }).click();
+  const sources = page.getByRole("dialog").filter({ has: page.locator(".studio-brand__sources-grid") });
+  await sources.waitFor({ timeout: 15000 });
+  const said = await sources.innerText();
+  check(said.includes(new URL(SITE).host) && said.includes("#0b6e4f") && said.includes("What was chosen") && /Colour strength/.test(said), "the kit's Sources show the site, its colours and where each was seen, and the option and settings chosen");
+  await shot("brand-kit-sources");
+  const thumb = sources.getByRole("button", { name: /^Screenshot of .*open it larger$/ });
+  await thumb.focus();
+  await page.keyboard.press("Enter");
+  const large = page.locator("dialog.studio-brand__image-preview[open]");
+  await large.waitFor({ timeout: 5000 });
+  const natural = await large.locator("img").evaluate((img) => img.naturalWidth);
+  check(natural === 1366 && (await large.getByRole("link", { name: "Open the image in a new tab" }).isVisible()), "the screenshot opens at full size, with a link to the image");
+  await shot("brand-screenshot-large");
+  await page.keyboard.press("Escape");
+  await large.waitFor({ state: "hidden", timeout: 5000 });
+  check(await thumb.evaluate((el) => el === document.activeElement), "Escape closes the large screenshot and focus returns to it");
+  await page.keyboard.press("Escape");
+  await sources.waitFor({ state: "hidden", timeout: 5000 });
   await showTab("App preview");
   const app = preview.locator(".app-rt").first();
   for (let i = 0; i < 40 && !(await app.getAttribute("data-brand-kit")); i++) await wait(500);

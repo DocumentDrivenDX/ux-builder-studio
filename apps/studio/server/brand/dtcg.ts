@@ -1,7 +1,10 @@
 /* A brand kit as a Design Tokens Community Group file (format 2025.10,
    .tokens.json), so the brand can leave the studio: primitives (the brand's
    own colours, from the website) and semantic roles for each appearance,
-   with colours as sRGB objects and fonts as font families. */
+   with colours as sRGB objects and fonts as font families. Where it came
+   from (the website or logo, when it was read, the option, design system
+   and engine settings chosen) travels with it, under $extensions
+   "studio.provenance". */
 
 import type { BrandKit } from "./store.js";
 
@@ -11,8 +14,9 @@ const colour = (hex: string, description?: string) => {
   return { $type: "color", $value: { colorSpace: "srgb", components, hex: `#${h}` }, ...(description ? { $description: description } : {}) };
 };
 
-export function toDtcg(kit: BrandKit) {
+export function toDtcg(kit: BrandKit, provenance?: Record<string, unknown>) {
   const out: Record<string, any> = {
+    ...(provenance ? { $extensions: { "studio.provenance": provenance } } : {}),
     $description: `${kit.name}: a UX Builder Studio brand kit (${kit.option.title}, on the ${kit.designSystem} design system)${kit.source ? `, from ${kit.source.url}` : ""}.`,
     primitive: { brand: Object.fromEntries(kit.colours.map((c, i) => [String(i + 1), colour(c.hex, `Seen on the website: ${c.sources.join(", ")}`)])) },
   };

@@ -32,7 +32,7 @@ function captureView(rec: CaptureRecord, designSystem?: string) {
   const logoFile = rec.logoType === "svg" ? "logo.svg" : "logo.png";
   return {
     id: rec.id, source: rec.source ?? "website", url: rec.url, finalUrl: rec.finalUrl, title: rec.title, name: nameOf(rec), capturedAt: rec.capturedAt,
-    screenshot: rec.source === "logo" ? null : `/api/brand/captures/${rec.id}/screenshot.png`, logo: rec.hasLogo ? `/api/brand/captures/${rec.id}/${logoFile}` : null,
+    screenshot: rec.source === "logo" ? null : `/api/brand/captures/${rec.id}/screenshot.png`, screenshotHeight: rec.source === "logo" ? null : rec.screenshotHeight ?? 900, logo: rec.hasLogo ? `/api/brand/captures/${rec.id}/${logoFile}` : null,
     analysis: rec.analysis, designSystem: ds, options, styles, adjustable: adjustRanges(), notes: [...rec.analysis.warnings, ...notes],
   };
 }
@@ -41,7 +41,7 @@ export async function captureBrand(url: string, designSystem?: string) {
   const rec = await serial(async () => {
     const cap = await capture(url);
     const analysis = await analyseCapture(cap);
-    const r: CaptureRecord = { id: newId(), source: "website", url: cap.url, finalUrl: cap.finalUrl, title: cap.facts.title, siteName: cap.facts.siteName, capturedAt: new Date().toISOString(), hasLogo: !!cap.logo, analysis };
+    const r: CaptureRecord = { id: newId(), source: "website", url: cap.url, finalUrl: cap.finalUrl, title: cap.facts.title, siteName: cap.facts.siteName, capturedAt: new Date().toISOString(), screenshotHeight: cap.screenshotHeight, hasLogo: !!cap.logo, analysis };
     saveCapture(r, { screenshot: cap.screenshot, logo: cap.logo });
     return r;
   });
@@ -71,6 +71,56 @@ const kitSummary = (k: BrandKit) => {
     usedBy: listApps().filter((a: any) => a.brandKit === k.id).map((a: any) => ({ id: a.id, name: a.name })),
   };
 };
+
+/* Where a kit came from and what was chosen from it: the capture (read-only),
+   the option, design system and engine settings. The capture is the record
+   of the brand's origin; it is kept even when its kit is removed. */
+export function kitSources(kit: BrandKit) {
+  const rec = kit.source ? getCapture(kit.source.captureId) : null;
+  let settings = kit.option.settings ?? null;
+  let notes: string[] = [];
+  if (rec) {
+    try {
+      const { options, notes: n } = paletteOptions(rec.analysis, kit.designSystem);
+      notes = [...rec.analysis.warnings, ...n];
+      if (!settings) settings = kit.option.adjusted && Object.keys(kit.option.adjusted).length
+        ? adjustOption(rec.analysis, kit.designSystem, kit.option.id, kit.option.adjusted as Adjustment).settings
+        : options.find((o) => o.id === kit.option.id)?.settings ?? null;
+    } catch { /* the settings can't be worked out again; the kit's colours are still its own */ }
+  }
+  const logoFile = rec?.logoType === "svg" ? "logo.svg" : "logo.png";
+  const screenshot = rec && rec.source !== "logo" && captureFile(rec.id, "screenshot.png") ? `/api/brand/captures/${rec.id}/screenshot.png` : null;
+  const logo = rec?.hasLogo && captureFile(rec.id, logoFile) ? `/api/brand/captures/${rec.id}/${logoFile}` : null;
+  const missing = !kit.source ? "This kit has no recorded source."
+    : !rec ? `The capture this kit was made from (${kit.source.captureId}) is no longer in the studio's data folder, so its screenshot and findings can't be shown. The kit's own colours are unaffected.`
+    : rec.source !== "logo" && !screenshot ? "The capture's screenshot file is missing from the studio's data folder." : null;
+  return {
+    kit: kitSummary(kit),
+    chosen: { option: { id: kit.option.id, title: kit.option.title, description: kit.option.description, strategy: kit.option.strategy }, designSystem: kit.designSystem, settings, adjusted: kit.option.adjusted ?? null, findings: kit.findings },
+    capture: rec ? {
+      id: rec.id, source: rec.source ?? "website", url: rec.url, finalUrl: rec.finalUrl, title: rec.title, name: nameOf(rec), capturedAt: rec.capturedAt,
+      screenshot, screenshotHeight: screenshot ? rec.screenshotHeight ?? 900 : null, logo,
+      colours: rec.analysis.colours, fonts: rec.analysis.fonts, style: rec.analysis.style, notes,
+    } : null,
+    missing,
+  };
+}
+
+/* A kit's provenance, as it travels in its DTCG file. */
+export function kitProvenance(kit: BrandKit) {
+  const s = kitSources(kit);
+  return {
+    source: s.capture ? (s.capture.source === "logo" ? { logoFile: s.capture.url.replace(/^file:/, "") } : { url: s.capture.url, finalUrl: s.capture.finalUrl }) : kit.source ? { url: kit.source.url } : null,
+    title: s.capture?.title ?? kit.source?.title ?? null,
+    capturedAt: s.capture?.capturedAt ?? null,
+    captureId: kit.source?.captureId ?? null,
+    option: { id: kit.option.id, strategy: kit.option.strategy, title: kit.option.title },
+    designSystem: kit.designSystem,
+    settings: s.chosen.settings,
+    adjusted: kit.option.adjusted ?? null,
+    kit: { id: kit.id, createdAt: kit.createdAt },
+  };
+}
 
 const tokenCache = new Map<string, Resolved>();
 export function kitTokens(id: string) {
@@ -142,7 +192,7 @@ export function mountBrand(app: express.Express) {
       name: String(name ?? "").trim() || nameOf(rec),
       source: { url: rec.finalUrl, title: rec.title, captureId: rec.id },
       designSystem,
-      option: { id: option.id, title: option.title, description: option.description, strategy: option.strategy, ...(option.adjusted ? { adjusted: option.adjusted } : {}) },
+      option: { id: option.id, title: option.title, description: option.description, strategy: option.strategy, settings: option.settings, ...(option.adjusted ? { adjusted: option.adjusted } : {}) },
       brand: option.brand,
       colours: rec.analysis.colours.map((c) => ({ hex: c.hex, sources: c.sources.map((s) => s.label) })),
       findings: option.findings,
@@ -154,11 +204,16 @@ export function mountBrand(app: express.Express) {
     if (!kit) throw new AppError(404, "BRAND_KIT_NOT_FOUND", `There is no brand kit ${req.params.id}`);
     res.json(kitSummary(kit));
   }));
+  app.get("/api/brand/kits/:id/sources", wrap((req, res) => {
+    const kit = getKit(String(req.params.id));
+    if (!kit) throw new AppError(404, "BRAND_KIT_NOT_FOUND", `There is no brand kit ${req.params.id}`);
+    res.json(kitSources(kit));
+  }));
   app.get("/api/brand/kits/:id/tokens", wrap((req, res) => { res.json(kitTokens(String(req.params.id))); }));
   app.get("/api/brand/kits/:id/tokens.json", wrap((req, res) => {
     const kit = getKit(String(req.params.id));
     if (!kit) throw new AppError(404, "BRAND_KIT_NOT_FOUND", `There is no brand kit ${req.params.id}`);
-    res.set("content-disposition", `attachment; filename="${kit.id}.tokens.json"`).type("application/json").send(JSON.stringify(toDtcg(kit), null, 2));
+    res.set("content-disposition", `attachment; filename="${kit.id}.tokens.json"`).type("application/json").send(JSON.stringify(toDtcg(kit, kitProvenance(kit)), null, 2));
   }));
   app.delete("/api/brand/kits/:id", wrap((req, res) => {
     const kit = getKit(String(req.params.id));

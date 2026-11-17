@@ -1,8 +1,10 @@
 /* Capturing a website for its brand, on this machine: a headless Chromium
    (Playwright) opens the page at desktop size, accepts a cookie banner if one
-   is in the way, takes a screenshot of the first screen, reads what the CSS
-   says (page-facts.ts) and screenshots the logo on its own. Nothing is sent
-   to any other service. */
+   is in the way, reads what the CSS says (page-facts.ts), screenshots the
+   first screen (what the colours are measured on) and the logo on its own,
+   then scrolls the page to load what loads lazily and keeps a longer
+   screenshot of it, at most SHOT_MAX px tall, as the record of what was
+   seen. Nothing is sent to any other service. */
 
 import { chromium } from "playwright";
 import { PAGE_FACTS, type PageFacts } from "./page-facts.js";
@@ -12,7 +14,11 @@ export type Capture = {
   finalUrl: string;
   facts: PageFacts;
   manifest: { themeColor: string | null; backgroundColor: string | null } | null;
+  /** The page from the top, at most SHOT_MAX px tall: the record of what was seen. */
   screenshot: Buffer;
+  screenshotHeight: number;
+  /** The first screen only (VIEWPORT): what the colours are measured on, so results don't depend on how long the page is. */
+  firstScreen: Buffer;
   logo: Buffer | null;
   warnings: string[];
 };
@@ -22,6 +28,7 @@ export class CaptureError extends Error {
 }
 
 export const VIEWPORT = { width: 1366, height: 900 };
+export const SHOT_MAX = 2000;
 
 /* A website address people type: example.com, www.example.com/about or a full URL. */
 export function normaliseUrl(input: string) {
@@ -112,10 +119,25 @@ async function readPage(browser: Awaited<ReturnType<typeof chromium.launch>>, ur
   await page.waitForTimeout(500);
 
   const facts = (await page.evaluate(PAGE_FACTS)) as PageFacts;
-  const screenshot = await page.screenshot({ type: "png" });
+  const firstScreen = await page.screenshot({ type: "png" });
   let logo: Buffer | null = null;
   if (facts.logo.found) logo = await page.locator("[data-studio-logo]").first().screenshot({ omitBackground: true, timeout: 5000 }).catch(() => null);
   if (!logo) warnings.push("No logo was found in the page's header; colours come from the page and its CSS.");
+
+  // Down the page a screen at a time, so lazily loaded images and sections appear, then back to the top for the longer screenshot.
+  const pageHeight = Number(await page.evaluate("Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0)").catch(() => VIEWPORT.height)) || VIEWPORT.height;
+  for (let y = VIEWPORT.height / 2; y < Math.min(pageHeight, SHOT_MAX); y += VIEWPORT.height / 2) {
+    await page.evaluate(`window.scrollTo(0, ${y})`).catch(() => {});
+    await page.waitForTimeout(250);
+  }
+  await page.evaluate("window.scrollTo(0, 0)").catch(() => {});
+  await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  const tall = Number(await page.evaluate("Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0)").catch(() => pageHeight)) || pageHeight;
+  const screenshotHeight = Math.max(1, Math.min(Math.round(tall), SHOT_MAX));
+  const screenshot = await page.screenshot({ type: "png", fullPage: true, clip: { x: 0, y: 0, width: VIEWPORT.width, height: screenshotHeight } })
+    .catch(() => null) ?? firstScreen;
+  const shotHeight = screenshot === firstScreen ? Math.min(VIEWPORT.height, screenshotHeight) : screenshotHeight;
 
   let manifest: Capture["manifest"] = null;
   if (facts.manifestHref) {
@@ -123,7 +145,7 @@ async function readPage(browser: Awaited<ReturnType<typeof chromium.launch>>, ur
     const m = res?.ok() ? await res.json().catch(() => null) : null;
     if (m) manifest = { themeColor: hexOf(m.theme_color), backgroundColor: hexOf(m.background_color) };
   }
-  return { url, finalUrl: page.url(), facts, manifest, screenshot, logo, warnings };
+  return { url, finalUrl: page.url(), facts, manifest, screenshot, screenshotHeight: shotHeight, firstScreen, logo, warnings };
 }
 
 /* An SVG logo drawn in the browser (as an image, so nothing in it runs) and

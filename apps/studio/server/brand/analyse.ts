@@ -58,7 +58,7 @@ export async function analyseCapture(c: Capture): Promise<BrandAnalysis> {
   for (const h of f.headings) add(h.hex, WEIGHTS.headings / Math.max(1, f.headings.length), { kind: "headings", label: "headings" });
   for (const v of f.variables) add(v.hex, BRAND_NAME.test(v.name) ? WEIGHTS.brandVariable : WEIGHTS.variable, { kind: "variable", label: `CSS ${v.name}` });
 
-  const shot = await analyseImage(new Uint8Array(c.screenshot), { inflate });
+  const shot = await analyseImage(new Uint8Array(c.firstScreen), { inflate });
   for (const cand of shot.candidates) add(cand.hex, WEIGHTS.screenshot * cand.share, { kind: "screenshot", label: `screenshot (${Math.round(cand.share * 100)}% of its colour)` });
   if (c.logo) {
     const logo = await analyseImage(new Uint8Array(c.logo), { inflate }).catch(() => null);

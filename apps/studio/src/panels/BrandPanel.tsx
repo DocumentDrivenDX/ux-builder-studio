@@ -16,13 +16,16 @@
       rules; Reset puts it back as offered. Open larger shows one option big,
       light and dark side by side, with the same sliders.
    6. Keep: the chosen option becomes a brand kit in the studio's library,
-      shared by every app; the app wears it at once. */
-import { useState } from "react";
+      shared by every app; the app wears it at once. Every kit keeps the
+      capture it came from: Sources shows it again, read-only (the site,
+      when it was read, the screenshot, what was found and what was chosen).
+ */
+import { useEffect, useState } from "react";
 import { Card, Dialog, Notice, StatusPill, ThemeProvider } from "@ux-builder/ui";
 import { Cluster, ConfirmDialog, Stack } from "@ux-builder/ui/patterns";
 import { Button, ChoicePicker, Select, TextField } from "../agent/generated/bound/ux-builder-ui";
 import { useBrand, type Appearance } from "../brand/brand";
-import type { AdjustRange, BrandKit, ColourFinding, PaletteOption } from "../api";
+import { api, type AdjustRange, type BrandKit, type ColourFinding, type KitSources, type PaletteOption } from "../api";
 import { useStudio } from "../studio";
 
 const APPEARANCES = [{ value: "system", label: "Auto" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }];
@@ -223,7 +226,120 @@ function OptionPopout({ option, index, open, current, ranges, onClose, onChoose,
   );
 }
 
-function KitRow({ kit, inUse, onApply, onRemove }: { kit: BrandKit; inUse: boolean; onApply(): void; onRemove(): void }) {
+const when = (iso: string) => { try { return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch { return iso; } };
+
+/* A website's screenshot, as tall as it was kept, in a frame that scrolls.
+   Activating it (click, Enter or Space) opens it at full size in ux-builder's
+   Dialog, with where and when it was taken; Escape closes it and focus comes
+   back here. */
+function Screenshot({ src, alt, url, capturedAt, height }: { src: string; alt: string; url: string; capturedAt: string; height?: number | null }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <figure className="studio-brand__shot">
+      <div className="studio-brand__shot-frame">
+        <button type="button" className="studio-brand__shot-button" onClick={() => setOpen(true)} aria-label={`${alt}: open it larger`} data-non-agent="opens the screenshot larger for the person to look at">
+          <img src={src} alt={alt} width={1366} height={height ?? undefined} />
+        </button>
+      </div>
+      <figcaption className="studio-meta">
+        <a className="studio-link" href={url} target="_blank" rel="noreferrer" data-non-agent="opens the website itself">{url}</a>{` · read ${when(capturedAt)}`}
+      </figcaption>
+      <Dialog open={open} onClose={() => setOpen(false)} className="studio-brand__image-preview" closeLabel="Close the screenshot"
+        title={alt} description={`${url} · read ${when(capturedAt)}${height ? ` · 1366 × ${height} px` : ""}`}
+        data-non-agent="the screenshot at full size, for the person to look at"
+        // Escape closes this one only: React passes a dialog's cancel up its tree, which would also close a Sources dialog around it.
+        onCancel={(e: any) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}
+        actions={<a className="studio-link" href={src} target="_blank" rel="noreferrer" data-non-agent="opens the image in a new tab">Open the image in a new tab</a>}>
+        {open ? <div className="studio-brand__image-scroll" tabIndex={0} aria-label="The screenshot at full size; scroll to see all of it"><img src={src} alt={alt} /></div> : null}
+      </Dialog>
+    </figure>
+  );
+}
+
+const SETTING_LABELS: Record<string, string> = {
+  hueShift: "Hue shift (degrees)", chromaScale: "Colour strength", neutralTint: "Tint of greys and backgrounds",
+  stateHarmony: "Status colours lean to the brand", groundLight: "Page lightness (light)", groundDark: "Page lightness (dark)",
+};
+
+/* Where a kit came from, read-only: the capture behind it, and what was chosen from it. */
+function SourcesDialog() {
+  const b = useBrand();
+  const id = b.sourcesOf;
+  const [data, setData] = useState<{ id: string; sources: KitSources } | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    let live = true;
+    setProblem(null);
+    api.brandKitSources(id).then((r) => { if (live) setData({ id, sources: r }); }, (e) => { if (live) setProblem(String(e?.body?.message ?? e?.message ?? e)); });
+    return () => { live = false; };
+  }, [id]);
+  const src = id && data?.id === id ? data.sources : null;
+  const c = src?.capture;
+  return (
+    <Dialog open={!!id} onClose={() => b.showSources(null)} className="studio-brand__sources" closeLabel="Close the sources"
+      title={src ? `Sources of ${src.kit.name}` : "Sources"}
+      description={src ? "Where this brand kit came from and what was chosen from it, as it was read. Nothing here can be changed." : undefined}
+      data-non-agent="a kit's sources, read-only; the App Expert opens it with show-brand-sources"
+      actions={<Button variant="secondary" onClick={() => b.showSources(null)} agent={{ nonAgent: "closes the sources" }}>Close</Button>}>
+      {!id ? null : problem ? <Notice tone="error" title={problem} /> : !src ? <p className="studio-meta">Loading…</p> : (
+        <div className="studio-brand__sources-grid" data-kit-id={src.kit.id}>
+          {src.missing ? <Notice tone="warning" title={src.missing} /> : null}
+          {c ? (
+            <>
+              <section aria-labelledby="sources-origin" className="studio-brand__sources-section">
+                <h3 id="sources-origin">{c.source === "logo" ? "From a logo file" : "From the website"}</h3>
+                <dl className="studio-brand__facts">
+                  {c.source === "logo" ? (<><dt>File</dt><dd>{c.url.replace(/^file:/, "")}</dd></>) : (
+                    <>
+                      <dt>Address given</dt><dd><a className="studio-link" href={c.url} target="_blank" rel="noreferrer" data-non-agent="opens the website itself">{c.url}</a></dd>
+                      {c.finalUrl !== c.url ? (<><dt>Page read</dt><dd><a className="studio-link" href={c.finalUrl} target="_blank" rel="noreferrer" data-non-agent="opens the website itself">{c.finalUrl}</a></dd></>) : null}
+                    </>
+                  )}
+                  <dt>Title</dt><dd>{c.title}</dd>
+                  <dt>Read</dt><dd>{when(c.capturedAt)}</dd>
+                  <dt>Capture</dt><dd><code>{c.id}</code></dd>
+                </dl>
+              </section>
+              <div className="studio-brand__sources-evidence">
+                {c.screenshot ? <Screenshot src={c.screenshot} alt={`Screenshot of ${c.title}`} url={c.finalUrl} capturedAt={c.capturedAt} height={c.screenshotHeight} /> : null}
+                <section aria-labelledby="sources-found" className="studio-brand__sources-section">
+                  <h3 id="sources-found">What was found</h3>
+                  {c.logo ? <img className="studio-brand__logo" src={c.logo} alt={`${c.name} logo`} /> : null}
+                  <ul className="studio-brand__colours">
+                    {c.colours.length ? c.colours.map((col) => (
+                      <li key={col.hex}><Swatch hex={col.hex} label={`${Math.round(col.share * 100)}%`} /><span className="studio-meta">{col.sources.map((x) => x.label).join(", ")}</span></li>
+                    )) : <li>No brand colour: only black, white and greys.</li>}
+                  </ul>
+                  {c.fonts.body ? <p className="studio-brand__fact">{`Text font: ${c.fonts.body}${c.fonts.heading && c.fonts.heading !== c.fonts.body ? `; headings: ${c.fonts.heading}` : ""}`}</p> : null}
+                  <p className="studio-brand__fact">{c.style.reason}</p>
+                  {c.notes.length ? <Notice tone="info" title="Notes from the reading">{c.notes.map((n, i) => <span key={i} className="studio-brand__note">{n}</span>)}</Notice> : null}
+                </section>
+              </div>
+            </>
+          ) : null}
+          <section aria-labelledby="sources-chosen" className="studio-brand__sources-section">
+            <h3 id="sources-chosen">What was chosen</h3>
+            <dl className="studio-brand__facts">
+              <dt>Option</dt><dd>{`${src.chosen.option.title} (${src.chosen.option.strategy})`}</dd>
+              <dt>Style</dt><dd>{src.chosen.designSystem}</dd>
+              <dt>Adjusted</dt><dd>{src.chosen.adjusted && Object.keys(src.chosen.adjusted).length ? Object.entries(src.chosen.adjusted).map(([k, v]) => `${SETTING_LABELS[k] ?? k} ${v}`).join("; ") : "No: as offered"}</dd>
+              <dt>Kept</dt><dd>{when(src.kit.createdAt)}</dd>
+            </dl>
+            {src.chosen.settings ? (
+              <table className="studio-brand__settings">
+                <caption className="studio-meta">The palette engine's settings it was made with</caption>
+                <tbody>{Object.entries(src.chosen.settings).map(([k, v]) => <tr key={k}><th scope="row">{SETTING_LABELS[k] ?? k}</th><td><code>{v}</code></td></tr>)}</tbody>
+              </table>
+            ) : null}
+          </section>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+function KitRow({ kit, inUse, onApply, onRemove, onSources }: { kit: BrandKit; inUse: boolean; onApply(): void; onRemove(): void; onSources(): void }) {
   return (
     <li className="studio-brand__kit" data-kit-id={kit.id}>
       <span className="studio-brand__kit-chips" aria-hidden="true">
@@ -235,6 +351,7 @@ function KitRow({ kit, inUse, onApply, onRemove }: { kit: BrandKit; inUse: boole
       </span>
       <Cluster gap={2}>
         {inUse ? <StatusPill state="live">In use</StatusPill> : <Button size="sm" variant="secondary" onClick={onApply} agent={{ nonAgent: "using a kit is the app room's apply-brand-kit action" }}>Use</Button>}
+        <Button size="sm" variant="secondary" onClick={onSources} aria-label={`Sources of ${kit.name}`} agent={{ nonAgent: "a kit's sources are the app room's show-brand-sources action" }}>Sources</Button>
         <a className="studio-link" href={`/api/brand/kits/${encodeURIComponent(kit.id)}/tokens.json`} download data-non-agent="downloads the kit as a file for the person">Download tokens</a>
         {!kit.usedBy.length ? <Button size="sm" variant="text" onClick={onRemove} agent={{ nonAgent: "removing a kit from the library is a person's decision" }}>Remove</Button> : null}
       </Cluster>
@@ -265,7 +382,8 @@ export function BrandPanel() {
         <h3 id="brand-now">The app's look now</h3>
         {b.current ? (
           <Cluster gap={3} align="center">
-            <span>{`Brand kit ${b.current.name} (${b.current.option.title}, ${b.current.designSystem} style)`}</span>
+            <span>{`Brand kit ${b.current.name} (${b.current.option.title}, ${b.current.designSystem} style)${b.current.source && !b.current.source.url.startsWith("file:") ? `, from ${new URL(b.current.source.url).hostname}` : ""}`}</span>
+            <Button size="sm" variant="secondary" onClick={() => b.showSources(b.current!.id)} aria-label={`Sources of ${b.current.name}`} agent={{ nonAgent: "a kit's sources are the app room's show-brand-sources action" }}>Sources</Button>
             <Button size="sm" variant="secondary" onClick={async () => report(await b.stopUsingKit())} agent={{ id: "brand.stop-kit", description: "Stop using the brand kit; the app shows its theme again" }}>Use the theme instead</Button>
           </Cluster>
         ) : (
@@ -294,12 +412,7 @@ export function BrandPanel() {
         <section aria-labelledby="brand-found" className="studio-brand__found">
           <h3 id="brand-found">{`2. What ${c.name} looks like`}</h3>
           <div className="studio-brand__evidence" data-source={c.source}>
-            {c.screenshot ? (
-              <figure className="studio-brand__shot">
-                <img src={c.screenshot} alt={`Screenshot of ${c.title}`} />
-                <figcaption className="studio-meta"><a className="studio-link" href={c.finalUrl} target="_blank" rel="noreferrer" data-non-agent="opens the website itself">{c.finalUrl}</a></figcaption>
-              </figure>
-            ) : null}
+            {c.screenshot ? <Screenshot src={c.screenshot} alt={`Screenshot of ${c.title}`} url={c.finalUrl} capturedAt={c.capturedAt} height={c.screenshotHeight} /> : null}
             <Card title={c.source === "logo" ? "Found in the logo" : "Found on the site"}>
               <Stack gap={3}>
                 {c.logo ? <img className="studio-brand__logo" src={c.logo} alt={`${c.name} logo`} /> : null}
@@ -356,11 +469,12 @@ export function BrandPanel() {
         <h3 id="brand-kits">Brand kit library</h3>
         {b.kits.length ? (
           <ul className="studio-brand__kits">
-            {b.kits.map((k) => <KitRow key={k.id} kit={k} inUse={b.current?.id === k.id} onApply={async () => report(await b.applyKit(k.id))} onRemove={() => setRemoving(k)} />)}
+            {b.kits.map((k) => <KitRow key={k.id} kit={k} inUse={b.current?.id === k.id} onApply={async () => report(await b.applyKit(k.id))} onRemove={() => setRemoving(k)} onSources={() => b.showSources(k.id)} />)}
           </ul>
         ) : <p className="studio-meta">No kits yet. A kit is kept here when you choose an option, and any app in the studio can use it.</p>}
       </section>
 
+      <SourcesDialog />
       <ConfirmDialog
         open={!!removing}
         title="Remove this brand kit?"

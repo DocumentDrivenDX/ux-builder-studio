@@ -35,6 +35,7 @@ export const api = {
   brandKits: () => call<{ kits: BrandKit[] }>("GET", "/api/brand/kits"),
   saveBrandKit: (input: { captureId: string; optionId: string; designSystem: string; name?: string; adjust?: Record<string, number> }) => call<BrandKit>("POST", "/api/brand/kits", input),
   removeBrandKit: (id: string) => call<{ ok: true }>("DELETE", `/api/brand/kits/${encodeURIComponent(id)}`),
+  brandKitSources: (id: string) => call<KitSources>("GET", `/api/brand/kits/${encodeURIComponent(id)}/sources`),
   brandKitTokens: (id: string) => call<KitTokens>("GET", `/api/brand/kits/${encodeURIComponent(id)}/tokens`),
 };
 
@@ -47,7 +48,7 @@ export type AdjustRange = { name: string; label: string; min: number; max: numbe
 export type Swatches = Record<"structure" | "accent" | "ground" | "surface" | "text", string>;
 export type PaletteOption = { id: string; title: string; description: string; strategy: string; tokens: KitTokens; swatches: Record<"light" | "dark", Swatches>; findings: ColourFinding[]; settings: Record<string, number>; adjusted?: Record<string, number> };
 export type BrandCapture = {
-  id: string; source: "website" | "logo"; url: string; finalUrl: string; title: string; name: string; capturedAt: string; screenshot: string | null; logo: string | null;
+  id: string; source: "website" | "logo"; url: string; finalUrl: string; title: string; name: string; capturedAt: string; screenshot: string | null; screenshotHeight?: number | null; logo: string | null;
   styles: StyleInfo[]; adjustable: AdjustRange[];
   analysis: {
     colours: Array<{ hex: string; share: number; sources: Array<{ kind: string; label: string }> }>;
@@ -63,6 +64,17 @@ export type BrandKit = {
   option: { id: string; title: string; description: string; strategy: string; adjusted?: Record<string, number> };
   swatches: { structure?: string; accent?: string; ground?: string; surface?: string };
   colours: Array<{ hex: string; sources: string[] }>; findings: ColourFinding[]; usedBy: Array<{ id: string; name: string }>;
+};
+/* Where a kit came from (its capture, read-only) and what was chosen from it. */
+export type KitSources = {
+  kit: BrandKit;
+  chosen: { option: { id: string; title: string; description: string; strategy: string }; designSystem: string; settings: Record<string, number> | null; adjusted: Record<string, number> | null; findings: ColourFinding[] };
+  capture: null | {
+    id: string; source: "website" | "logo"; url: string; finalUrl: string; title: string; name: string; capturedAt: string;
+    screenshot: string | null; screenshotHeight: number | null; logo: string | null;
+    colours: BrandCapture["analysis"]["colours"]; fonts: BrandCapture["analysis"]["fonts"]; style: BrandCapture["analysis"]["style"]; notes: string[];
+  };
+  missing: string | null;
 };
 
 /* One EventSource for the whole tab: definition and data changes. */

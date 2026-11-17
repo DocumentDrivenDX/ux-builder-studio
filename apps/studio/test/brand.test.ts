@@ -24,7 +24,14 @@ const sites: Server = createServer((req, res) => {
   // A site that refuses every automated browser, and one that refuses only a browser calling itself headless.
   if (site === "blocked" || (site === "no-headless" && /HeadlessChrome/.test(String(req.headers["user-agent"])))) { res.statusCode = 403; res.setHeader("content-type", "text/html"); return res.end(DENIED); }
   if (site === "no-headless") site = "evergreen";
-  try { res.setHeader("content-type", "text/html"); res.end(readFileSync(join(import.meta.dirname, "..", "fixtures", "sites", site, "index.html"))); }
+  // A long page: the same site with 3,000 px more below the first screen.
+  const tall = site === "tall";
+  if (tall) site = "evergreen";
+  try {
+    res.setHeader("content-type", "text/html");
+    const html = readFileSync(join(import.meta.dirname, "..", "fixtures", "sites", site, "index.html"), "utf8");
+    res.end(tall ? html.replace("</body>", `<div style="height:3000px;background:#f4f1ea"></div></body>`) : html);
+  }
   catch { res.statusCode = 404; res.end(); }
 });
 await new Promise<void>((r) => sites.listen(0, "127.0.0.1", r));
@@ -60,6 +67,18 @@ test("a green site: its brand colour from buttons, links, theme colour, CSS and 
   const shot = await call("GET", green.screenshot);
   assert.equal(shot.status, 200);
   assert.deepEqual([...new Uint8Array(shot.body).slice(1, 4)], [80, 78, 71], "a PNG screenshot");
+  assert.equal(pngHeight(shot.body), green.screenshotHeight, "the screenshot is as tall as the capture says");
+});
+
+const pngHeight = (body: ArrayBuffer) => new DataView(body).getUint32(20);
+test("a long page is kept as a longer screenshot, at most 2000 px, while its colours come from the first screen", async () => {
+  const r = await call("POST", "/api/brand/captures", { url: `${SITES}/tall/` });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.screenshotHeight, 2000);
+  const shot = await call("GET", r.body.screenshot);
+  assert.equal(pngHeight(shot.body), 2000);
+  assert.equal(new DataView(shot.body).getUint32(16), 1366);
+  assert.equal(r.body.analysis.colours[0].hex, green.analysis.colours[0].hex, "the same brand colour as the short page");
 });
 
 test("three distinct options, none breaking a colour rule, each with light and dark tokens", () => {
@@ -150,6 +169,28 @@ test("the chosen option is kept as a brand kit, with its tokens and a DTCG expor
   assert.equal(dtcg.body.light.color.structure.$value.colorSpace, "srgb");
   assert.equal(dtcg.body.light.color.structure.$value.components.length, 3);
   assert.deepEqual(dtcg.body.font.body.$value.slice(0, 1), ["Roboto"]);
+  const provenance = dtcg.body.$extensions["studio.provenance"];
+  assert.equal(provenance.source.url, `${SITES}/evergreen/`);
+  assert.equal(provenance.captureId, green.id);
+  assert.equal(provenance.capturedAt, green.capturedAt);
+  assert.equal(provenance.title, green.title);
+  assert.deepEqual(provenance.option, { id: option.id, strategy: option.strategy, title: option.title });
+  assert.equal(provenance.designSystem, "material");
+  assert.deepEqual(provenance.settings, option.settings, "the engine settings travel with the tokens");
+  // Its sources: the capture behind it, read-only, and what was chosen from it.
+  const src = await call("GET", `/api/brand/kits/${kit.id}/sources`);
+  assert.equal(src.status, 200, JSON.stringify(src.body));
+  assert.equal(src.body.missing, null);
+  assert.equal(src.body.capture.id, green.id);
+  assert.equal(src.body.capture.finalUrl, green.finalUrl);
+  assert.equal(src.body.capture.screenshot, green.screenshot);
+  assert.ok(src.body.capture.logo);
+  assert.equal(src.body.capture.colours[0].hex, "#0b6e4f");
+  assert.ok(src.body.capture.colours[0].sources.length > 1);
+  assert.equal(src.body.capture.style.designSystem, "material");
+  assert.deepEqual(src.body.chosen.option.id, option.id);
+  assert.deepEqual(src.body.chosen.settings, option.settings);
+  assert.equal(src.body.chosen.designSystem, "material");
   const again = await call("POST", "/api/brand/kits", { captureId: green.id, optionId: green.options[0].id, designSystem: "material", adjust: { chromaScale: 0.6 } });
   assert.equal(again.body.id, "evergreen-legal-2", "a second kit of the same name gets its own id");
   assert.deepEqual(again.body.option.adjusted, { chromaScale: 0.6 }, "an adjusted option is kept as adjusted");
@@ -178,6 +219,9 @@ test("an app wears a kit; unknown themes and kits are refused; a kit in use cann
   const off = await ops({ brandKit: "" });
   assert.equal(off.body.definition.extensions["umf.ux"].look.brandKit, undefined);
   assert.equal((await call("DELETE", `/api/brand/kits/${kit.id}`)).status, 200);
+  const capture = await call("GET", `/api/brand/captures/${kit.source.captureId}`);
+  assert.equal(capture.status, 200, "removing a kit keeps the capture it was made from");
+  assert.equal((await call("GET", capture.body.screenshot)).status, 200);
 });
 
 test("a site that turns away headless browsers is still read; one that refuses every browser is reported, not analysed", async () => {
