@@ -15,8 +15,9 @@ import { CollectionRegion, type HeaderSlots } from "./CollectionRegion";
 import { EmptyRows, RowsTable, Totals } from "./RowsTable";
 import { FormRegion } from "./FormRegion";
 import { ScheduleRegion } from "./ScheduleRegion";
+import { ChartRegion } from "./ChartRegion";
 
-export { CollectionRegion, FormRegion, ScheduleRegion };
+export { ChartRegion, CollectionRegion, FormRegion, ScheduleRegion };
 export type { HeaderSlots };
 
 export interface RegionProps {
@@ -41,6 +42,8 @@ export function RegionView(props: RegionProps) {
   const description = region.description ? text(region.description, scope) : "";
 
   if (region.kind === "collection") return <CollectionRegion region={region} scope={scope} screenKey={screenKey} header={header} />;
+  // A chart carries its own frame, title and loading state.
+  if (region.kind === "chart") return <ChartRegion region={region} scope={scope} />;
   if (region.kind === "form" && page) return <FormRegion region={region} scope={scope} screenKey={screenKey} page={page} back={back} />;
 
   let body: ReactNode;

@@ -91,7 +91,7 @@ export interface DocumentSection {
   empty?: Text;
 }
 
-export type RegionKind = "collection" | "record" | "related" | "form" | "schedule" | "stats" | "notice" | "actions" | "document";
+export type RegionKind = "collection" | "record" | "related" | "form" | "schedule" | "stats" | "chart" | "notice" | "actions" | "document";
 
 export interface Region {
   id: string;
@@ -131,6 +131,12 @@ export interface Region {
   legend?: Array<{ label: string; description?: string }>;
 
   tiles?: Array<{ label: string; value: Rule; format?: "text" | "number" | "currency" | "hours" | "percent" }>;
+
+  /** chart: the kind of chart, what each bar or point shows, date periods for groupBy, and the most groups shown. */
+  chart?: "bar" | "column" | "line";
+  measure?: { aggregate: "count" | "sum" | "average" | "min" | "max"; field?: Ref; derived?: string; label?: string; format?: "number" | "currency" | "hours" | "percent" };
+  bucket?: "day" | "week" | "month" | "quarter" | "year";
+  limit?: number;
 
   tone?: "info" | "accent" | "success" | "warning" | "error";
   message?: Text;

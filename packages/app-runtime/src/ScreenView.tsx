@@ -4,7 +4,7 @@
    itself, so the screen has exactly one level-1 heading. */
 import { useMemo, type ReactNode } from "react";
 import { Breadcrumbs, Button, Skeleton } from "@ux-builder/ui";
-import { ErrorScreen, Page, PageHeader, Stack } from "@ux-builder/ui/patterns";
+import { ErrorScreen, Grid, Page, PageHeader, Stack } from "@ux-builder/ui/patterns";
 import { hrefOf, useApp } from "./context";
 import type { Location } from "./contract";
 import type { Placement, Screen } from "./definition";
@@ -66,14 +66,34 @@ export function ScreenView({ screen, param }: { screen: Screen; param?: string }
         {!hostsHeader && !formPage && (
           <PageHeader title={title} description={description} breadcrumbs={breadcrumbs} actions={actions} secondaryActions={secondary} />
         )}
-        {regions.map((r, i) => (
-          <RegionView key={r.id} region={r} scope={scope} screenKey={param} row={row} back={back}
-            header={i === 0 && hostsHeader ? { title, breadcrumbs, actions, secondaryActions: secondary } : undefined}
-            page={i === 0 && formPage ? { title: typeof title === "string" ? title : "", description, breadcrumbs } : undefined} />
-        ))}
+        {runs(regions).map((run) => {
+          // Charts side by side: two or more in a row sit two across from the medium size up.
+          if (run.length > 1) return (
+            <Grid key={run[0].r.id} columns={{ compact: 1, medium: 2 }} gap={4}>
+              {run.map(({ r }) => <RegionView key={r.id} region={r} scope={scope} screenKey={param} row={row} back={back} />)}
+            </Grid>
+          );
+          const { r, i } = run[0];
+          return (
+            <RegionView key={r.id} region={r} scope={scope} screenKey={param} row={row} back={back}
+              header={i === 0 && hostsHeader ? { title, breadcrumbs, actions, secondaryActions: secondary } : undefined}
+              page={i === 0 && formPage ? { title: typeof title === "string" ? title : "", description, breadcrumbs } : undefined} />
+          );
+        })}
       </Stack>
     </Page>
   );
+}
+
+/* Regions in order, with neighbouring charts kept together. */
+function runs(regions: Screen["regions"]) {
+  const out: Array<Array<{ r: Screen["regions"][number]; i: number }>> = [];
+  regions.forEach((r, i) => {
+    const last = out[out.length - 1];
+    if (r.kind === "chart" && last && last[0].r.kind === "chart") last.push({ r, i });
+    else out.push([{ r, i }]);
+  });
+  return out;
 }
 
 function backTitle(rt: ReturnType<typeof useApp>["rt"], s: Screen | undefined, to: Location): string {
