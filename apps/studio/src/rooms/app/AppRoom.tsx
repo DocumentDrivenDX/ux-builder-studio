@@ -73,6 +73,10 @@ export function AppRoom() {
       s.setPanel("brand");
       return asRoom(await b.adjustOption(option, adjust as Record<string, number>));
     },
+    resetBrandOption(input) {
+      s.setPanel("brand");
+      return asRoom(b.resetOption(input.option));
+    },
     captureBrandLogo() {
       s.setPanel("brand");
       return { ok: true, data: { shown: "The Brand and style panel; the person adds the logo file there" } };
@@ -115,7 +119,7 @@ export function AppRoom() {
           source: b.capture.source,
           styles: b.capture.styles.map((x) => `${x.name}${x.name === b.capture!.analysis.style.designSystem ? " (suggested)" : ""}: ${x.findings.length ? x.findings.map((f) => `${f.rule}: ${f.message}`).join("; ") : "meets the style rules"}`),
           defaultAppearance: b.appearance,
-          options: b.options.map((o) => ({ id: o.id, title: o.title, description: o.description, buttons: o.swatches.light.structure, links: o.swatches.light.accent, page: o.swatches.light.ground, settings: o.settings, adjusted: o.adjusted ?? null, review: o.findings.map((f) => `${f.rule} (${f.appearance}): ${f.message}`) })),
+          options: b.options.map((o) => ({ id: o.id, title: o.title, description: o.description, buttons: o.swatches.light.structure, links: o.swatches.light.accent, page: o.swatches.light.ground, settings: o.settings, adjusted: o.adjusted ?? null, adjusting: b.live[o.id]?.problem ? `the person's last slider setting cannot meet the contrast rules: ${b.live[o.id]!.problem}` : null, review: o.findings.map((f) => `${f.rule} (${f.appearance}): ${f.message}`) })),
           notes: b.capture.notes,
         }) : "",
         kits: b.kits.map((k) => `${k.id}: ${k.name} (${k.option.title}, ${k.designSystem})`),

@@ -428,23 +428,53 @@ await step("Bring in the firm's brand from its website: three options, one chose
   await shot("brand-options-dark");
   await panels().getByRole("radiogroup", { name: "Show in" }).getByRole("radio", { name: "Light" }).click();
   check(await panels().locator(".studio-brand__style").isVisible(), "the chosen style says what it settles of the theme rules");
-  // Not quite right: make the second option softer, on pure greys.
+  // Not quite right: make the second option softer, on pure greys. It changes as the sliders move; there is nothing to apply.
   const second = options.nth(1);
-  const before = (await second.locator(".studio-swatch").first().locator("code").innerText()).trim();
+  const swatch = (n) => second.locator(".studio-swatch").nth(n).locator("code").innerText().then((t) => t.trim());
+  const before = await swatch(0);
   await second.getByText("Adjust this option").click();
-  const setRange = async (label, v) => second.getByLabel(new RegExp(`^${label} for`)).evaluate((el, value) => {
+  const setRange = async (scope, label, v) => scope.getByLabel(new RegExp(`^${label} for`)).evaluate((el, value) => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
   }, String(v));
-  await setRange("Colour strength", 0.6);
-  await setRange("Tint of greys and backgrounds", 0);
-  await second.getByRole("button", { name: "Try these settings" }).click();
+  check((await second.getByRole("button", { name: "Try these settings" }).count()) === 0, "there is no apply button: adjusting is live");
+  check(await second.getByRole("button", { name: "Reset to the original" }).isDisabled(), "Reset is unavailable while the option is as offered");
+  const t0 = Date.now();
+  await setRange(second, "Colour strength", 0.6);
   await second.getByText("Adjusted", { exact: true }).waitFor({ timeout: 30000 });
-  const buttons = (await second.locator(".studio-swatch").first().locator("code").innerText()).trim();
+  check(Date.now() - t0 < 5000, `the option is made again as the slider moves (${Date.now() - t0} ms)`);
+  await setRange(second, "Tint of greys and backgrounds", 0);
+  let ground = "";
+  for (let i = 0; i < 40; i++) { ground = await swatch(2); if (ground.slice(1, 3) === ground.slice(3, 5) && ground.slice(3, 5) === ground.slice(5, 7)) break; await wait(250); }
+  const buttons = await swatch(0);
   check(buttons !== before, `the adjusted option is made again (buttons ${before} → ${buttons})`);
-  const ground = (await second.locator(".studio-swatch").nth(2).locator("code").innerText()).trim();
   check(ground.slice(1, 3) === ground.slice(3, 5) && ground.slice(3, 5) === ground.slice(5, 7), `on a pure grey page (${ground})`);
   await shot("brand-option-adjusted");
+  // Back to the original, then adjusted again.
+  await second.getByRole("button", { name: "Reset to the original" }).click();
+  await second.getByText("Adjusted", { exact: true }).waitFor({ state: "detached", timeout: 10000 });
+  check((await swatch(0)) === before && (await second.getByLabel(/^Colour strength for/).inputValue()) !== "0.6", `Reset puts the option and its sliders back as offered (buttons ${before})`);
+  await setRange(second, "Colour strength", 0.6);
+  await setRange(second, "Tint of greys and backgrounds", 0);
+  for (let i = 0; i < 40 && (await swatch(0)) !== buttons; i++) await wait(250);
+  check((await swatch(0)) === buttons, "the same settings make the same option again");
+  // The larger view: light and dark side by side, the same sliders, Escape closes it and focus returns.
+  const opener = second.getByRole("button", { name: /^Open .* larger$/ });
+  await opener.click();
+  const big = page.getByRole("dialog").filter({ has: page.locator(".studio-brand__popout-grid") });
+  await big.waitFor({ timeout: 10000 });
+  check((await big.locator('[data-appearance-shown="light"]').count()) === 1 && (await big.locator('[data-appearance-shown="dark"]').count()) === 1, "the larger view shows the option in light and dark side by side");
+  check((await big.getByLabel(/^Colour strength for .*\(larger view\)$/).inputValue()) === "0.6", "the larger view's sliders are the card's");
+  await shot("brand-option-larger");
+  await setRange(big, "Hue shift \\(degrees\\)", 12);
+  let moved = "";
+  for (let i = 0; i < 40; i++) { moved = await swatch(0); if (moved !== buttons) break; await wait(250); }
+  check(moved !== buttons, `a slider in the larger view changes the option on its card too (buttons ${buttons} → ${moved})`);
+  await setRange(big, "Hue shift \\(degrees\\)", 0);
+  for (let i = 0; i < 40 && (await swatch(0)) !== buttons; i++) await wait(250);
+  await page.keyboard.press("Escape");
+  await big.waitFor({ state: "hidden", timeout: 5000 });
+  check(await opener.evaluate((el) => el === document.activeElement), "Escape closes the larger view and focus returns to its button");
   await second.getByRole("button", { name: "Use this option" }).click();
   await panels().locator(".studio-brand__kit", { hasText: "In use" }).waitFor({ timeout: 60000 });
   check((await panels().locator(".studio-brand__kits").innerText()).includes("Evergreen Legal"), "the choice is kept as a brand kit in the library");

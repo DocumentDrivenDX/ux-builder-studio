@@ -10,13 +10,15 @@
    4. Three palette options from ux-builder's palette engine, fitted to the
       contrast margin and checked against the colour rules, each tried on
       real widgets in light and dark.
-   5. Adjust: an option that is not quite right is made again with changed
-      settings (hue, strength, tint, page lightness), never by picking
-      colours by hand, so it still passes the rules.
+   5. Adjust: an option that is not quite right is made again, live as its
+      sliders move, with changed settings (hue, strength, tint, page
+      lightness), never by picking colours by hand, so it still passes the
+      rules; Reset puts it back as offered. Open larger shows one option big,
+      light and dark side by side, with the same sliders.
    6. Keep: the chosen option becomes a brand kit in the studio's library,
       shared by every app; the app wears it at once. */
 import { useState } from "react";
-import { Card, Notice, StatusPill, ThemeProvider } from "@ux-builder/ui";
+import { Card, Dialog, Notice, StatusPill, ThemeProvider } from "@ux-builder/ui";
 import { Cluster, ConfirmDialog, Stack } from "@ux-builder/ui/patterns";
 import { Button, ChoicePicker, Select, TextField } from "../agent/generated/bound/ux-builder-ui";
 import { useBrand, type Appearance } from "../brand/brand";
@@ -36,10 +38,10 @@ function Swatch({ hex, label }: { hex?: string; label: string }) {
   );
 }
 
-/* A few real widgets in the option's colours: what the app will look like. Inert: it is a sample. */
-function Specimen({ option, appearance }: { option: PaletteOption; appearance: "light" | "dark" }) {
+/* A few real widgets in the option's colours: what the app will look like. Inert: it is a sample. Large adds a fuller screen for the larger view. */
+function Specimen({ option, appearance, large = false }: { option: PaletteOption; appearance: "light" | "dark"; large?: boolean }) {
   return (
-    <ThemeProvider tokens={option.tokens[appearance]} appearance={appearance} favicon={false} className="studio-brand__specimen" data-option={option.id} data-appearance-shown={appearance}>
+    <ThemeProvider tokens={option.tokens[appearance]} appearance={appearance} favicon={false} className={`studio-brand__specimen${large ? " studio-brand__specimen--large" : ""}`} data-option={option.id} data-appearance-shown={appearance}>
       <div inert data-non-agent="a sample of the option's colours, not a control">
         <Stack gap={3}>
           <p className="studio-brand__specimen-title">Matters this week</p>
@@ -49,10 +51,20 @@ function Specimen({ option, appearance }: { option: PaletteOption; appearance: "
             <StatusPill state="limited">Due soon</StatusPill>
             <StatusPill state="closed">Overdue</StatusPill>
           </Cluster>
+          {large ? (
+            <Card title="Halvorsen v. Marsh">
+              <Stack gap={2}>
+                <p className="studio-brand__specimen-text">Discovery closes Friday. Two exhibits still need review.</p>
+                <Notice tone="info" title="Hearing moved to 10:30" />
+                <Notice tone="error" title="One invoice is missing its receipt" />
+              </Stack>
+            </Card>
+          ) : null}
           <TextField label="Client" value="Halvorsen" readOnly onChange={() => {}} agent={{ nonAgent: "a sample field in the option's colours" }} />
           <Cluster gap={2}>
             <Button agent={{ nonAgent: "a sample button in the option's colours" }}>Approve</Button>
             <Button variant="secondary" agent={{ nonAgent: "a sample button in the option's colours" }}>Send back</Button>
+            {large ? <Button variant="text" agent={{ nonAgent: "a sample button in the option's colours" }}>Add a note</Button> : null}
           </Cluster>
         </Stack>
       </div>
@@ -60,11 +72,18 @@ function Specimen({ option, appearance }: { option: PaletteOption; appearance: "
   );
 }
 
-function Findings({ findings, ok = "Meets the colour rules" }: { findings: ColourFinding[]; ok?: string }) {
+/* What the findings are: ux-builder's proposed theme and colour rules, measured here. */
+const FINDINGS_ABOUT = {
+  option: "These are ux-builder's theme and colour rules (most of them still proposed in its rules catalog), measured on this option in light and dark. Items to review don't stop you using it: an option that broke contrast or put red on buttons and links would not be offered.",
+  style: "These are ux-builder's proposed theme rules, measured on this style. They come from the design system itself (its focus ring, shadows and type), not from the brand's colours, so they are fixed in ux-builder's design-system tokens. They don't stop you using it.",
+};
+
+function Findings({ findings, ok = "Meets the colour rules", about }: { findings: ColourFinding[]; ok?: string; about: keyof typeof FINDINGS_ABOUT }) {
   if (!findings.length) return <StatusPill state="live">{ok}</StatusPill>;
   return (
     <details className="studio-brand__findings">
       <summary><StatusPill state="limited">{`${findings.length} to review`}</StatusPill></summary>
+      <p className="studio-brand__findings-about">{FINDINGS_ABOUT[about]}</p>
       <FindingList findings={findings} />
     </details>
   );
@@ -75,34 +94,46 @@ const FindingList = ({ findings }: { findings: ColourFinding[] }) => (
   </ul>
 );
 
-/* The engine's settings for one option, as sliders; applying makes the option again. */
-function Adjust({ option, ranges, busy, onApply, onReset }: { option: PaletteOption; ranges: AdjustRange[]; busy: boolean; onApply(v: Record<string, number>): void; onReset(): void }) {
-  const [draft, setDraft] = useState<Record<string, number>>(option.settings);
-  const [shown, setShown] = useState(option.settings);
-  if (shown !== option.settings) { setShown(option.settings); setDraft(option.settings); }
-  const changed = ranges.filter((r) => draft[r.name] !== option.settings[r.name]);
+/* The engine's settings for one option, as sliders. Moving one makes the option again at once; the state is the provider's, so the card and the larger view show the same thing. */
+function Sliders({ option, ranges, where }: { option: PaletteOption; ranges: AdjustRange[]; where: "card" | "popout" }) {
+  const b = useBrand();
+  const state = b.live[option.id];
+  const values = state?.values ?? option.settings;
+  const changed = b.isChanged(option.id);
   return (
-    <details className="studio-brand__adjust" open={!!option.adjusted || undefined}>
-      <summary>Adjust this option</summary>
-      <p className="studio-meta">The engine makes the option again with these settings, so it still meets the contrast rules. Or tell the App Expert, for example "a bit darker and less saturated".</p>
+    <div className="studio-brand__adjust-body">
       <div className="studio-brand__sliders" data-non-agent="adjusting is the app room's adjust-brand-option action">
         {ranges.map((r) => (
           <label key={r.name} className="studio-brand__slider">
-            <span>{r.label} <code>{Number(draft[r.name]).toFixed(r.step >= 1 ? 0 : 2)}</code></span>
-            <input type="range" data-non-agent="adjusting is the app room's adjust-brand-option action" min={r.min} max={r.max} step={r.step} value={draft[r.name] ?? r.default} aria-label={`${r.label} for ${option.title}`}
-              onChange={(e) => setDraft({ ...draft, [r.name]: Number(e.target.value) })} />
+            <span>{r.label} <code>{Number(values[r.name] ?? r.default).toFixed(r.step >= 1 ? 0 : 2)}</code></span>
+            <input type="range" data-non-agent="adjusting is the app room's adjust-brand-option action" min={r.min} max={r.max} step={r.step} value={values[r.name] ?? r.default}
+              aria-label={`${r.label} for ${option.title}${where === "popout" ? " (larger view)" : ""}`}
+              onChange={(e) => b.setSetting(option.id, r.name, Number(e.target.value))} />
           </label>
         ))}
       </div>
-      <Cluster gap={2}>
-        <Button size="sm" variant="secondary" busy={busy} disabled={!changed.length} onClick={() => onApply(Object.fromEntries(changed.map((r) => [r.name, draft[r.name]])))} agent={{ nonAgent: "adjusting is the app room's adjust-brand-option action" }}>Try these settings</Button>
-        {option.adjusted ? <Button size="sm" variant="text" onClick={onReset} agent={{ nonAgent: "undoing an adjustment is a person's choice in the panel" }}>Back to the original</Button> : null}
-      </Cluster>
+      <div className="studio-brand__adjust-foot">
+        <Button size="sm" variant="secondary" disabled={!changed} onClick={() => b.resetOption(option.id)}
+          agent={{ nonAgent: "resetting an option is the app room's reset-brand-option action" }}>Reset to the original</Button>
+        <span className="studio-brand__updating studio-meta" role="status" data-updating={state?.updating ? "" : undefined}>{state?.updating ? "Updating…" : ""}</span>
+      </div>
+      {state?.problem ? <p className="studio-brand__adjust-problem" role="alert">{`${state.problem} The option shows the last settings that fit.`}</p> : null}
+    </div>
+  );
+}
+
+function Adjust({ option, ranges }: { option: PaletteOption; ranges: AdjustRange[] }) {
+  const b = useBrand();
+  return (
+    <details className="studio-brand__adjust" open={b.isChanged(option.id) || undefined}>
+      <summary>Adjust this option</summary>
+      <p className="studio-meta">Each change makes the option again with the palette engine, so it still meets the contrast rules. Or tell the App Expert, for example "a bit darker and less saturated".</p>
+      <Sliders option={option} ranges={ranges} where="card" />
     </details>
   );
 }
 
-function OptionCard({ option, index, appearance, current, ranges, busy, onChoose, onAdjust, onReset }: { option: PaletteOption; index: number; appearance: "light" | "dark"; current: boolean; ranges: AdjustRange[]; busy: string | null; onChoose(): void; onAdjust(v: Record<string, number>): void; onReset(): void }) {
+function OptionCard({ option, index, appearance, current, ranges, busy, onChoose, onOpen }: { option: PaletteOption; index: number; appearance: "light" | "dark"; current: boolean; ranges: AdjustRange[]; busy: string | null; onChoose(): void; onOpen(): void }) {
   const sw = option.swatches[appearance];
   return (
     <article className="studio-brand__option" aria-labelledby={`brand-option-${option.id}`} data-option-id={option.id} data-adjusted={option.adjusted ? "" : undefined}>
@@ -110,7 +141,7 @@ function OptionCard({ option, index, appearance, current, ranges, busy, onChoose
         <h4 id={`brand-option-${option.id}`}>{`${index + 1}. ${option.title}`}</h4>
         <Cluster gap={2}>
           {option.adjusted ? <StatusPill state="evaluation">Adjusted</StatusPill> : null}
-          <Findings findings={option.findings} />
+          <Findings findings={option.findings} about="option" />
         </Cluster>
       </header>
       <p className="studio-meta">{option.description}</p>
@@ -120,11 +151,75 @@ function OptionCard({ option, index, appearance, current, ranges, busy, onChoose
         <Swatch hex={sw.accent} label="Links" />
         <Swatch hex={sw.ground} label="Page" />
       </div>
-      <Adjust option={option} ranges={ranges} busy={busy === "adjusting"} onApply={onAdjust} onReset={onReset} />
-      <Button onClick={onChoose} busy={busy === "saving"} disabled={current} agent={{ nonAgent: "choosing an option is the app room's choose-brand-option action" }}>
-        {current ? "In use" : "Use this option"}
-      </Button>
+      <Adjust option={option} ranges={ranges} />
+      <Cluster gap={2}>
+        <Button onClick={onChoose} busy={busy === "saving"} disabled={current} agent={{ nonAgent: "choosing an option is the app room's choose-brand-option action" }}>
+          {current ? "In use" : "Use this option"}
+        </Button>
+        <Button variant="secondary" onClick={onOpen} aria-label={`Open ${option.title} larger`} agent={{ nonAgent: "the larger view is for the person to look at; the App Expert reads the options from the brand observation" }}>Open larger</Button>
+      </Cluster>
     </article>
+  );
+}
+
+/* One option, large: light and dark side by side on a fuller sample screen,
+   its colours, the style, the same live sliders and reset as its card, and
+   what it leaves to review. ux-builder's Dialog: focus stays inside, Escape
+   closes it, and focus returns to the button that opened it. */
+function OptionPopout({ option, index, open, current, ranges, onClose, onChoose, busy }: { option: PaletteOption | null; index: number; open: boolean; current: boolean; ranges: AdjustRange[]; onClose(): void; onChoose(): void; busy: string | null }) {
+  const b = useBrand();
+  const c = b.capture;
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <Dialog open={open} onClose={onClose} className="studio-brand__popout" closeLabel="Close the larger view"
+      title={option ? `${index + 1}. ${option.title}` : ""} description={option?.description}
+      data-non-agent="the larger view of an option; its controls repeat the card's, which the app room's brand actions cover"
+      actions={option ? (
+        <>
+          <Button variant="secondary" onClick={onClose} agent={{ nonAgent: "closes the larger view" }}>Close</Button>
+          <Button onClick={onChoose} busy={busy === "saving"} disabled={current} agent={{ nonAgent: "choosing an option is the app room's choose-brand-option action" }}>{current ? "In use" : "Use this option"}</Button>
+        </>
+      ) : undefined}>
+      {open && option && c ? (
+        <div className="studio-brand__popout-grid" data-option-id={option.id}>
+          <div className="studio-brand__popout-stage">
+            {(["light", "dark"] as const).map((ap) => (
+              <figure key={ap} className="studio-brand__popout-shot">
+                <figcaption className="studio-meta">{ap === "light" ? "Light" : "Dark"}</figcaption>
+                <Specimen option={option} appearance={ap} large />
+                <div className="studio-brand__swatches">
+                  <Swatch hex={option.swatches[ap].structure} label="Buttons" />
+                  <Swatch hex={option.swatches[ap].accent} label="Links" />
+                  <Swatch hex={option.swatches[ap].ground} label="Page" />
+                  <Swatch hex={option.swatches[ap].surface} label="Cards" />
+                  <Swatch hex={option.swatches[ap].text} label="Text" />
+                </div>
+              </figure>
+            ))}
+          </div>
+          <aside className="studio-brand__popout-side" aria-label="Style, adjustments and rules">
+            <Select label="Style (design system)" value={c.designSystem}
+              options={c.styles.map((d) => ({ value: d.name, label: `${d.title}${d.name === c.analysis.style.designSystem ? " (suggested)" : ""}` }))}
+              onChange={async (e: any) => { const r = await b.setDesignSystem(e.target.value); setProblem(r.ok ? null : r.message); }}
+              agent={{ nonAgent: "the same choice as the panel's style; the App Expert uses set-brand-design-system" }} />
+            {problem ? <Notice tone="error" title={problem} /> : null}
+            <section aria-labelledby="popout-adjust" className="studio-brand__popout-section">
+              <h3 id="popout-adjust">{option.adjusted ? "Adjust (adjusted)" : "Adjust"}</h3>
+              <Sliders option={option} ranges={ranges} where="popout" />
+            </section>
+            <section aria-labelledby="popout-rules" className="studio-brand__popout-section">
+              <h3 id="popout-rules">Rules</h3>
+              {option.findings.length ? (
+                <>
+                  <p className="studio-brand__findings-about">{FINDINGS_ABOUT.option}</p>
+                  <FindingList findings={option.findings} />
+                </>
+              ) : <StatusPill state="live">Meets the colour rules</StatusPill>}
+            </section>
+          </aside>
+        </div>
+      ) : null}
+    </Dialog>
   );
 }
 
@@ -154,9 +249,13 @@ export function BrandPanel() {
   const [name, setName] = useState("");
   const [removing, setRemoving] = useState<BrandKit | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [popped, setPopped] = useState<string | null>(null);
   const look = s.view?.definition.extensions?.["umf.ux"]?.look ?? { theme: "plain" };
   const c = b.capture;
   const style = c?.styles.find((x) => x.name === c.designSystem);
+  const popIndex = b.options.findIndex((o) => o.id === popped);
+  const popOption = popIndex >= 0 ? b.options[popIndex] : null;
+  const isCurrent = (o: PaletteOption) => !!c && !!b.current && b.current.source?.captureId === c.id && b.current.option.id === o.id && b.current.designSystem === c.designSystem && JSON.stringify(b.current.option.adjusted ?? {}) === JSON.stringify(o.adjusted ?? {});
 
   const report = (r: { ok: boolean; message?: string }) => setProblem(r.ok ? null : (r as any).message ?? "Something went wrong");
 
@@ -227,7 +326,7 @@ export function BrandPanel() {
           </Cluster>
           {style ? (
             <div className="studio-brand__style" data-style={style.name}>
-              <Findings findings={style.findings} ok={`${style.title} meets the style rules`} />
+              <Findings findings={style.findings} ok={`${style.title} meets the style rules`} about="style" />
             </div>
           ) : null}
 
@@ -238,15 +337,17 @@ export function BrandPanel() {
             <TextField label="Kit name" placeholder={c.name} value={name} onChange={(e: any) => setName(e.target.value)}
               agent={{ id: "brand.kit-name", description: "The name the chosen option is kept under in the brand kit library" }} />
           </Cluster>
-          <div className="studio-brand__options" aria-busy={b.busy === "options" || b.busy === "adjusting" || undefined}>
+          <div className="studio-brand__options" aria-busy={b.busy === "options" || undefined}>
             {b.options.map((o, i) => (
               <OptionCard key={`${c.designSystem}:${o.id}`} option={o} index={i} appearance={shownIn} busy={b.busy} ranges={c.adjustable}
-                current={!!b.current && b.current.source?.captureId === c.id && b.current.option.id === o.id && b.current.designSystem === c.designSystem && JSON.stringify(b.current.option.adjusted ?? {}) === JSON.stringify(o.adjusted ?? {})}
+                current={isCurrent(o)}
                 onChoose={async () => report(await b.chooseOption(o.id, name))}
-                onAdjust={async (v) => report(await b.adjustOption(o.id, v))}
-                onReset={() => b.resetOption(o.id)} />
+                onOpen={() => setPopped(o.id)} />
             ))}
           </div>
+          <OptionPopout option={popOption} index={popIndex} open={!!popOption} current={!!popOption && isCurrent(popOption)} ranges={c.adjustable} busy={b.busy}
+            onClose={() => setPopped(null)}
+            onChoose={async () => { if (!popOption) return; const r = await b.chooseOption(popOption.id, name); report(r); if (r.ok) setPopped(null); }} />
         </section>
       ) : null}
       {problem ? <Notice tone="error" title={problem} /> : null}

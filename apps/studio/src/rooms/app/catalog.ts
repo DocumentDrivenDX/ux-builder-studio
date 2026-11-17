@@ -16,6 +16,7 @@ export interface AppCtx {
   setBrandDesignSystem(input: { designSystem: string }): Promise<RoomResult>;
   chooseBrandOption(input: { option: string; name?: string; appearance?: "system" | "light" | "dark" }): Promise<RoomResult>;
   adjustBrandOption(input: { option: string; hueShift?: number; chromaScale?: number; neutralTint?: number; stateHarmony?: number; groundLight?: number; groundDark?: number }): Promise<RoomResult>;
+  resetBrandOption(input: { option: string }): RoomResult;
   captureBrandLogo(): RoomResult;
   applyBrandKit(input: { kit: string }): Promise<RoomResult>;
   stopBrandKit(): Promise<RoomResult>;
@@ -149,6 +150,16 @@ export const appRoom: RoomCatalog<AppCtx> = {
       },
       effect: "edit",
       run: (ctx, input) => ctx.adjustBrandOption(input as never),
+    },
+    {
+      kind: "action",
+      id: "reset-brand-option",
+      title: "Reset a brand option",
+      description: "Puts one of the captured brand's options back as it was offered: its original engine settings and colours, undoing every adjustment to it (the person's slider moves and adjust-brand-option). Use it when the person says to go back to the original.",
+      control: "An option's Reset to the original button in the Brand and style panel",
+      input: { type: "object", properties: { option: { type: "string", description: "An option id from the brand observation" } }, required: ["option"], additionalProperties: false },
+      effect: "edit",
+      run: (ctx, input) => ctx.resetBrandOption(input as never),
     },
     {
       kind: "action",

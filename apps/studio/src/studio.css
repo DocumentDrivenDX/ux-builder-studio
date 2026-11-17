@@ -122,6 +122,25 @@
 .studio-brand__found > h3 { margin: var(--piq-space-2) 0 0; }
 .studio-new-look { display: flex; flex-direction: column; gap: var(--piq-space-3); }
 @media (max-width: 900px) { .studio-brand__evidence { grid-template-columns: minmax(0, 1fr); } }
+.studio-brand__findings-about { margin: var(--piq-space-2) 0 0; font-size: var(--piq-font-size-small, 0.875rem); color: var(--piq-color-text-muted); max-inline-size: 60ch; }
+.studio-brand__adjust-body { display: flex; flex-direction: column; gap: var(--piq-space-3); }
+.studio-brand__adjust-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--piq-space-3); min-block-size: 2rem; }
+/* "Updating…" keeps its place, so nothing moves while a slider is dragged. */
+.studio-brand__updating { min-inline-size: 7ch; }
+.studio-brand__adjust-problem { margin: 0; padding: var(--piq-space-2) var(--piq-space-3); border-inline-start: 3px solid var(--piq-color-status-caution); background: var(--piq-color-status-caution-subtle); color: var(--piq-color-text); font-size: var(--piq-font-size-small, 0.875rem); border-radius: var(--piq-radius-control, 4px); }
+.studio-brand__option .piq-cluster:last-child { margin-block-start: auto; }
+
+/* The larger view of one option: wide, light and dark side by side, the controls beside them. */
+.piq-dialog.studio-brand__popout { inline-size: min(1240px, calc(100vw - var(--piq-space-4) * 2)); max-block-size: calc(100dvh - var(--piq-space-4) * 2); overflow: auto; }
+.studio-brand__popout-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem); gap: var(--piq-space-5); align-items: start; }
+.studio-brand__popout-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--piq-space-4); }
+.studio-brand__popout-shot { margin: 0; display: flex; flex-direction: column; gap: var(--piq-space-2); }
+.studio-brand__specimen--large { padding: var(--piq-space-5); min-block-size: 26rem; }
+.studio-brand__popout-side { display: flex; flex-direction: column; gap: var(--piq-space-4); }
+.studio-brand__popout-section { display: flex; flex-direction: column; gap: var(--piq-space-2); }
+.studio-brand__popout-section h3 { margin: 0; font-size: var(--piq-font-size-body); font-weight: var(--piq-font-weight-strong); color: var(--piq-color-text-strong); }
+@media (max-width: 1000px) { .studio-brand__popout-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .studio-brand__popout-stage { grid-template-columns: minmax(0, 1fr); } .studio-brand__specimen--large { min-block-size: 0; } }
 @media (max-width: 1100px) {
   .studio { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 40dvh); }
   .studio-chat { border-inline-start: 0; border-block-start: var(--piq-border-default) solid var(--piq-color-border); }

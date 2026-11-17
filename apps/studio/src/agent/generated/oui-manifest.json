@@ -1,5 +1,5 @@
 {
-  "buildId": "e829da60726472e6",
+  "buildId": "fcbe66ad52b8e592",
   "surfaces": [
     {
       "actions": [
@@ -1421,6 +1421,34 @@
           ],
           "source": "room-action",
           "title": "Create variant"
+        },
+        {
+          "description": "Reset a brand option: Puts one of the captured brand's options back as it was offered: its original engine settings and colours, undoing every adjustment to it (the person's slider moves and adjust-brand-option). Use it when the person says to go back to the original. (An option's Reset to the original button in the Brand and style panel)",
+          "effect": "edit",
+          "id": "app/action/reset-brand-option",
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "option": {
+                "description": "An option id from the brand observation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "option"
+            ],
+            "type": "object"
+          },
+          "name": "app_reset_brand_option",
+          "reach": [
+            {
+              "kind": "room",
+              "room": "app",
+              "where": "An option's Reset to the original button in the Brand and style panel"
+            }
+          ],
+          "source": "room-action",
+          "title": "Reset a brand option"
         },
         {
           "description": "Reset sample data: Throws away every change made in the preview and reloads the app's sample data. (The preview's Reset sample data button)",
